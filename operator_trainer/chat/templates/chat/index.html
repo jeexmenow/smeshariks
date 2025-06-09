@@ -402,6 +402,7 @@
             align-items: center;
             gap: 10px;
         }
+
         .wiki-button-fixed {
     position: fixed;
     bottom: 20px;
@@ -433,17 +434,13 @@
                 <h1>Чат для смешариков</h1>
             </div>
             <div class="user-actions">
-                <span class="username">Привет, {{ user.username }} :)</span>
+                <span class="username">Рады видеть тебя, {{ user.username }} :)</span>
                 {% if user.is_authenticated and user.is_staff %}
                     <a href="/admin/" class="admin-button" target="_blank">
                         <i class="fas fa-cog"></i>
                         <span>Ты тут главный, можешь зайти</span>
                     </a>
-                {% endif %}
-                <a href="{% url 'logout' %}" class="logout-button">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Выйти</span>
-                    {% if user.is_authenticated %}
+                {% if user.is_authenticated %}
     <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov"
        class="wiki-button-fixed"
        target="_blank"
@@ -452,6 +449,10 @@
         <span>База знаний</span>
     </a>
 {% endif %}
+                {% endif %}
+                <a href="{% url 'logout' %}" class="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
                 </a>
             </div>
         </div>
