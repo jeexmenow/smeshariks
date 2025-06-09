@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажёр смешариков</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #25D366;
+            --primary-dark: #128C7E;
+            --client-bubble: #FFFFFF;
+            --operator-bubble: #DCF8C6;
+            --background: #EDEDED;
+            --header-bg: #075E54;
+            --text-dark: #4A4A4A;
+            --text-light: #FFFFFF;
+            --hint-bg: #FFF9C4;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-dark);
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            color: var(--text-light);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 500;
+            margin-left: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .username {
+            font-weight: 500;
+        }
+
+        .logout-button {
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .logout-button:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            background-color: #E5DDD5;
+            background-image: url("https://web.whatsapp.com/img/bg-chat-tile-light_a4be512e7195b6b733d9110b408f075d.png");
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 75%;
+            margin-bottom: 15px;
+            position: relative;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeIn 0.4s ease;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .client {
+            align-self: flex-start;
+            background-color: var(--client-bubble);
+            color: var(--text-dark);
+            border-top-left-radius: 4px;
+        }
+
+        .operator {
+            align-self: flex-end;
+            background-color: var(--operator-bubble);
+            color: var(--text-dark);
+            border-top-right-radius: 4px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            margin-right: 8px;
+            object-fit: cover;
+        }
+
+        .message-sender {
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .message-time {
+            display: block;
+            text-align: right;
+            font-size: 11px;
+            color: rgba(0,0,0,0.4);
+            margin-top: 5px;
+        }
+
+        .hints-container {
+            background-color: var(--hint-bg);
+            padding: 15px;
+            margin: 10px 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hints-container h3 {
+            color: #5F5F5F;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hints-container h3 i {
+            font-size: 16px;
+        }
+
+        .hint {
+            background-color: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hint:last-child {
+            margin-bottom: 0;
+        }
+
+        .hint:hover {
+            background-color: #F5F5F5;
+            transform: translateX(5px);
+        }
+
+        .hint::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background-color: var(--primary-color);
+        }
+
+        .input-container {
+            padding: 12px 15px;
+            background-color: #F0F0F0;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #DDD;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 24px;
+            outline: none;
+            font-size: 15px;
+            margin-right: 12px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            transition: var(--transition);
+        }
+
+        .input-container input:focus {
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .input-container button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .input-container button:hover {
+            background-color: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .input-container button:active {
+            transform: scale(0.95);
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-self: flex-start;
+            padding: 10px 16px;
+            background-color: white;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            animation: pulse 1.5s infinite;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #999;
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        /* Анимации */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* Кастомный скроллбар */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.3);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 85%;
+                padding: 10px 14px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .avatar {
+                width: 36px;
+                height: 36px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .chat-messages {
+                padding: 15px 12px;
+            }
+
+            .input-container {
+                padding: 10px 12px;
+            }
+
+            .input-container input {
+                padding: 10px 15px;
+                margin-right: 8px;
+            }
+
+            .input-container button {
+                width: 42px;
+                height: 42px;
+            }
+        }
+    .admin-button {
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-right: 10px;
+        }
+
+        .admin-button:hover {
+            background-color: #5a6268;
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .wiki-button-fixed {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #4e73df;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.wiki-button-fixed:hover {
+    background-color: #3a5bc7;
+    transform: translateY(-3px);
+}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="user-info">
+                <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="avatar">
+                <h1>Чат для смешариков</h1>
+            </div>
+            <div class="user-actions">
+                <span class="username">Привет, {{ user.username }} :)</span>
+                {% if user.is_authenticated and user.is_staff %}
+                    <a href="/admin/" class="admin-button" target="_blank">
+                        <i class="fas fa-cog"></i>
+                        <span>Ты тут главный, можешь зайти</span>
+                    </a>
+                {% endif %}
+                <a href="{% url 'logout' %}" class="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                    {% if user.is_authenticated %}
+    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov"
+       class="wiki-button-fixed"
+       target="_blank"
+       title="Документация для операторов">
+        <i class="fas fa-book"></i>
+        <span>База знаний</span>
+    </a>
+{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="messages-container">
+            <!-- Сообщение клиента -->
+            <div class="message client">
+                <div class="message-header">
+                    <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="message-avatar">
+                    <span class="message-sender">Клиент</span>
+                </div>
+                {{ client_message }}
+                <span class="message-time">{{ current_time }}</span>
+            </div>
+
+            <!-- Ответ оператора (если есть) -->
+            {% if user_answer %}
+            <div class="message operator">
+                <div class="message-header">
+                    <img src="{{ user.avatar }}" alt="Ваш аватар" class="message-avatar">
+                    <span class="message-sender">Вы</span>
+                </div>
+                {{ user_answer }}
+                <span class="message-time">{{ current_time }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Подсказки -->
+            {% if hints %}
+            <div class="hints-container">
+                <h3>
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Варианты верных ответов:</span>
+                </h3>
+                {% for hint in hints %}
+                <div class="hint" onclick="insertHint('{{ hint|slice:'11:' }}')">
+                    <i class="fas fa-comment-dots"></i>
+                    {{ hint }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Поле ввода -->
+        <form method="post" class="input-container">
+            {% csrf_token %}
+            <input type="text" name="user_answer" placeholder="Введите ваш ответ..." autocomplete="off" required id="message-input">
+            <button type="submit">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Автоматическая прокрутка вниз
+        const messagesContainer = document.getElementById('messages-container');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Вставка подсказки в поле ввода
+        function insertHint(text) {
+            const input = document.getElementById('message-input');
+            input.value = text;
+            input.focus();
+        }
+
+        // Фокус на поле ввода при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('message-input').focus();
+        });
+
+        // Плавная прокрутка при добавлении новых сообщений
+        const observer = new MutationObserver(() => {
+            messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        });
+
+        observer.observe(messagesContainer, {
+            childList: true,
+            subtree: true
+        });
+    </script>
+</body>
+</html>
