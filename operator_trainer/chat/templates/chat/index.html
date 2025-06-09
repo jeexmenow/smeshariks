@@ -19,6 +19,9 @@
             --hint-bg: #FFF9C4;
             --shadow: 0 2px 5px rgba(0,0,0,0.1);
             --transition: all 0.3s ease;
+            --sidebar-bg: #FFFFFF;
+            --sidebar-width: 300px;
+            --unread-badge: #25D366;
         }
 
         * {
@@ -95,18 +98,151 @@
             background-color: rgba(255,255,255,0.2);
         }
 
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-container {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            display: flex;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .chat-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .chat-item.active {
+            background-color: #ebebeb;
+        }
+
+        .chat-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+        }
+
+        .chat-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chat-name {
+            font-weight: 500;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-preview {
+            font-size: 13px;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .unread-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: var(--unread-badge);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
             background-color: #E5DDD5;
             background-image: url("https://web.whatsapp.com/img/bg-chat-tile-light_a4be512e7195b6b733d9110b408f075d.png");
             position: relative;
             overflow: hidden;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .chat-header {
+            background-color: var(--sidebar-bg);
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .chat-header-info {
+            margin-left: 15px;
+            flex: 1;
+        }
+
+        .chat-header-name {
+            font-weight: 500;
+        }
+
+        .chat-header-status {
+            font-size: 13px;
+            color: #777;
         }
 
         .chat-messages {
@@ -247,6 +383,7 @@
             display: flex;
             align-items: center;
             border-top: 1px solid #DDD;
+            z-index: 1;
         }
 
         .input-container input {
@@ -309,6 +446,16 @@
             animation: typingAnimation 1.4s infinite ease-in-out;
         }
 
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
         /* Анимации */
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -322,20 +469,24 @@
         }
 
         /* Кастомный скроллбар */
-        .chat-messages::-webkit-scrollbar {
+        .chat-messages::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar {
             width: 6px;
         }
 
-        .chat-messages::-webkit-scrollbar-track {
+        .chat-messages::-webkit-scrollbar-track,
+        .sidebar::-webkit-scrollbar-track {
             background: rgba(0,0,0,0.05);
         }
 
-        .chat-messages::-webkit-scrollbar-thumb {
+        .chat-messages::-webkit-scrollbar-thumb,
+        .sidebar::-webkit-scrollbar-thumb {
             background: rgba(0,0,0,0.2);
             border-radius: 3px;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb:hover {
+        .chat-messages::-webkit-scrollbar-thumb:hover,
+        .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(0,0,0,0.3);
         }
 
@@ -353,6 +504,24 @@
             .avatar {
                 width: 36px;
                 height: 36px;
+            }
+
+            .sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 100;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .sidebar-toggle {
+                display: block !important;
             }
         }
 
@@ -379,7 +548,8 @@
                 height: 42px;
             }
         }
-    .admin-button {
+
+        .admin-button {
             background-color: #6c757d;
             color: white;
             text-decoration: none;
@@ -404,30 +574,80 @@
         }
 
         .wiki-button-fixed {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background-color: #4e73df;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 50px;
-    text-decoration: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #4e73df;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
 
-.wiki-button-fixed:hover {
-    background-color: #3a5bc7;
-    transform: translateY(-3px);
-}
+        .wiki-button-fixed:hover {
+            background-color: #3a5bc7;
+            transform: translateY(-3px);
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+
+        .back-button {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-dark);
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .back-button {
+                display: block;
+            }
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+
+        .empty-state i {
+            font-size: 50px;
+            margin-bottom: 20px;
+            color: #ccc;
+        }
     </style>
 </head>
 <body>
     <div class="header">
+        <button class="sidebar-toggle" id="sidebar-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
         <div class="header-content">
             <div class="user-info">
                 <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="avatar">
@@ -441,14 +661,14 @@
                         <span>Ты тут главный, можешь зайти</span>
                     </a>
                 {% if user.is_authenticated %}
-    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov"
-       class="wiki-button-fixed"
-       target="_blank"
-       title="Документация для операторов">
-        <i class="fas fa-book"></i>
-        <span>База знаний</span>
-    </a>
-{% endif %}
+                    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov"
+                       class="wiki-button-fixed"
+                       target="_blank"
+                       title="Документация для операторов">
+                        <i class="fas fa-book"></i>
+                        <span>База знаний</span>
+                    </a>
+                {% endif %}
                 {% endif %}
                 <a href="{% url 'logout' %}" class="logout-button">
                     <i class="fas fa-sign-out-alt"></i>
@@ -458,87 +678,284 @@
         </div>
     </div>
 
-    <div class="chat-container">
-        <div class="chat-messages" id="messages-container">
-            <!-- Сообщение клиента -->
-            <div class="message client">
-                <div class="message-header">
-                    <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="message-avatar">
-                    <span class="message-sender">Клиент</span>
-                </div>
-                {{ client_message }}
-                <span class="message-time">{{ current_time }}</span>
+    <div class="main-container">
+        <!-- Боковая панель с чатами -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Диалоги</h2>
+                <button id="new-chat-btn" title="Новый диалог">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-
-            <!-- Ответ оператора (если есть) -->
-            {% if user_answer %}
-            <div class="message operator">
-                <div class="message-header">
-                    <img src="{{ user.avatar }}" alt="Ваш аватар" class="message-avatar">
-                    <span class="message-sender">Вы</span>
-                </div>
-                {{ user_answer }}
-                <span class="message-time">{{ current_time }}</span>
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Поиск диалогов...">
             </div>
-            {% endif %}
-
-            <!-- Подсказки -->
-            {% if hints %}
-            <div class="hints-container">
-                <h3>
-                    <i class="fas fa-lightbulb"></i>
-                    <span>Варианты верных ответов:</span>
-                </h3>
-                {% for hint in hints %}
-                <div class="hint" onclick="insertHint('{{ hint|slice:'11:' }}')">
-                    <i class="fas fa-comment-dots"></i>
-                    {{ hint }}
+            <div class="chat-list" id="chat-list">
+                {% for dialog in dialogs %}
+                <div class="chat-item {% if dialog.id == active_dialog.id %}active{% endif %}" data-dialog-id="{{ dialog.id }}">
+                    <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="chat-avatar">
+                    <div class="chat-info">
+                        <div class="chat-name">Клиент #{{ dialog.id }}</div>
+                        <div class="chat-preview">
+                            {% with last_message=dialog.messages.last %}
+                                {{ last_message.text|truncatechars:30 }}
+                            {% endwith %}
+                        </div>
+                        <div class="chat-time">
+                            {% with last_message=dialog.messages.last %}
+                                {{ last_message.timestamp|time:"H:i" }}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    {% if dialog.unread_count %}
+                    <div class="unread-badge">{{ dialog.unread_count }}</div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <p>У вас пока нет диалогов</p>
+                    <button id="start-new-chat" class="btn btn-primary">Начать новый диалог</button>
                 </div>
                 {% endfor %}
             </div>
-            {% endif %}
         </div>
 
-        <!-- Поле ввода -->
-        <form method="post" class="input-container">
-            {% csrf_token %}
-            <input type="text" name="user_answer" placeholder="Введите ваш ответ..." autocomplete="off" required id="message-input">
-            <button type="submit">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                </svg>
-            </button>
-        </form>
+        <!-- Основное окно чата -->
+        <div class="chat-container" id="chat-container">
+            {% if active_dialog %}
+            <div class="chat-header">
+                <button class="back-button" id="back-button">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="avatar">
+                <div class="chat-header-info">
+                    <div class="chat-header-name">Клиент #{{ active_dialog.id }}</div>
+                    <div class="chat-header-status">в сети</div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="messages-container">
+                {% for message in active_dialog.messages.all %}
+                    {% if message.sender %}
+                        <!-- Сообщение оператора -->
+                        <div class="message operator">
+                            <div class="message-header">
+                                <img src="{{ user.avatar }}" alt="Ваш аватар" class="message-avatar">
+                                <span class="message-sender">Вы</span>
+                            </div>
+                            {{ message.text }}
+                            <span class="message-time">{{ message.timestamp|time:"H:i" }}</span>
+                        </div>
+                    {% else %}
+                        <!-- Сообщение клиента -->
+                        <div class="message client">
+                            <div class="message-header">
+                                <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="message-avatar">
+                                <span class="message-sender">Клиент</span>
+                            </div>
+                            {{ message.text }}
+                            <span class="message-time">{{ message.timestamp|time:"H:i" }}</span>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Подсказки -->
+                {% if hints %}
+                <div class="hints-container">
+                    <h3>
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Варианты верных ответов:</span>
+                    </h3>
+                    {% for hint in hints %}
+                    <div class="hint" onclick="insertHint('{{ hint|slice:"11:" }}')">
+                        <i class="fas fa-comment-dots"></i>
+                        {{ hint }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле ввода -->
+            <form method="post" class="input-container" id="message-form">
+                {% csrf_token %}
+                <input type="hidden" name="dialog_id" value="{{ active_dialog.id }}">
+                <input type="text" name="user_answer" placeholder="Введите ваш ответ..." autocomplete="off" required id="message-input">
+                <button type="submit">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                    </svg>
+                </button>
+            </form>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-comment-slash"></i>
+                <h3>Выберите диалог для начала общения</h3>
+                <p>Или создайте новый диалог</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         // Автоматическая прокрутка вниз
-        const messagesContainer = document.getElementById('messages-container');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
 
         // Вставка подсказки в поле ввода
         function insertHint(text) {
             const input = document.getElementById('message-input');
-            input.value = text;
-            input.focus();
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
         }
 
         // Фокус на поле ввода при загрузке
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('message-input').focus();
+            const input = document.getElementById('message-input');
+            if (input) input.focus();
+            scrollToBottom();
         });
 
         // Плавная прокрутка при добавлении новых сообщений
-        const observer = new MutationObserver(() => {
-            messagesContainer.scrollTo({
-                top: messagesContainer.scrollHeight,
-                behavior: 'smooth'
+        const observer = new MutationObserver(scrollToBottom);
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+            observer.observe(messagesContainer, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        // Переключение боковой панели на мобильных устройствах
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+
+        document.getElementById('back-button').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.add('active');
+        });
+
+        // Обработка выбора чата
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const dialogId = this.getAttribute('data-dialog-id');
+                // Здесь можно добавить AJAX-запрос для загрузки диалога
+                window.location.href = `?dialog=${dialogId}`;
             });
         });
 
-        observer.observe(messagesContainer, {
-            childList: true,
-            subtree: true
+        // Создание нового чата
+        document.getElementById('new-chat-btn').addEventListener('click', function() {
+            window.location.href = '?new_dialog=1';
+        });
+
+        document.getElementById('start-new-chat').addEventListener('click', function() {
+            window.location.href = '?new_dialog=1';
+        });
+
+        // AJAX отправка сообщения
+        $('#message-form').on('submit', function(e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const input = $('#message-input');
+            const messageText = input.val().trim();
+
+            if (!messageText) return;
+
+            // Добавляем сообщение оператора сразу (оптимистичный UI)
+            const messagesContainer = $('#messages-container');
+            const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            messagesContainer.append(`
+                <div class="message operator">
+                    <div class="message-header">
+                        <img src="{{ user.avatar }}" alt="Ваш аватар" class="message-avatar">
+                        <span class="message-sender">Вы</span>
+                    </div>
+                    ${messageText}
+                    <span class="message-time">${currentTime}</span>
+                </div>
+            `);
+
+            scrollToBottom();
+
+            // Очищаем поле ввода
+            input.val('');
+
+            // Отправляем данные на сервер
+            $.ajax({
+                type: 'POST',
+                url: '{% url "send_message" %}',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.status === 'ok') {
+                        // Сервер может вернуть ответ клиента
+                        if (response.client_message) {
+                            // Добавляем индикатор набора сообщения
+                            messagesContainer.append(`
+                                <div class="typing-indicator">
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                </div>
+                            `);
+
+                            scrollToBottom();
+
+                            // Через некоторое время добавляем ответ клиента
+                            setTimeout(() => {
+                                $('.typing-indicator').remove();
+
+                                messagesContainer.append(`
+                                    <div class="message client">
+                                        <div class="message-header">
+                                            <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="message-avatar">
+                                            <span class="message-sender">Клиент</span>
+                                        </div>
+                                        ${response.client_message}
+                                        <span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                `);
+
+                                // Добавляем подсказки, если они есть
+                                if (response.hints && response.hints.length > 0) {
+                                    let hintsHtml = `
+                                        <div class="hints-container">
+                                            <h3>
+                                                <i class="fas fa-lightbulb"></i>
+                                                <span>Варианты верных ответов:</span>
+                                            </h3>`;
+
+                                    response.hints.forEach(hint => {
+                                        hintsHtml += `
+                                            <div class="hint" onclick="insertHint('${hint.substring(11)}')">
+                                                <i class="fas fa-comment-dots"></i>
+                                                ${hint}
+                                            </div>`;
+                                    });
+
+                                    hintsHtml += `</div>`;
+                                    messagesContainer.append(hintsHtml);
+                                }
+
+                                scrollToBottom();
+                            }, 1500);
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ошибка отправки сообщения:', error);
+                }
+            });
         });
     </script>
 </body>
