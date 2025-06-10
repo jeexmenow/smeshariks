@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from .models import Dialog, Message, CustomUser
+from .models import Dialog, Message, CustomUser, Question
 from django.utils.html import format_html
 
 
@@ -18,10 +18,10 @@ class MessageInline(admin.TabularInline):
 
 @admin.register(Dialog)
 class DialogAdmin(admin.ModelAdmin):
-    list_display = ('user', 'user_email', 'start_time', 'end_time', 'is_completed', 'message_count')
+    list_display = ('user', 'user_email', 'start_time', 'end_time', 'is_completed', 'is_closed', 'message_count')
     list_select_related = ('user',)
     inlines = [MessageInline]
-    list_filter = ('is_completed', 'start_time', 'user__email')  # Фильтр для группировки по пользователю
+    list_filter = ('is_completed', 'is_closed', 'start_time', 'user__email')
     search_fields = ('user__username', 'user__email')
 
     def user_email(self, obj):
@@ -35,7 +35,6 @@ class DialogAdmin(admin.ModelAdmin):
 
     message_count.short_description = 'Сообщений'
 
-    # Сортировка для группировки диалогов по пользователю
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('user').order_by('user__email', 'start_time')
@@ -90,3 +89,26 @@ class CustomUserAdmin(admin.ModelAdmin):
     list_filter = ('is_trainer', 'is_active', 'date_joined')
     search_fields = ('username', 'email')
     list_select_related = True
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ('text_preview', 'created_at', 'hints_preview', 'responses_preview')
+    search_fields = ('text',)
+    list_filter = ('created_at',)
+    fields = ('text', 'hints', 'client_responses')
+
+    def hints_preview(self, obj):
+        return ", ".join(obj.get_hints_list())
+
+    hints_preview.short_description = 'Подсказки'
+
+    def responses_preview(self, obj):
+        return ", ".join(obj.get_client_responses_list())
+
+    responses_preview.short_description = 'Ответы клиента'
+
+    def text_preview(self, obj):
+        return obj.text[:50] + '...' if len(obj.text) > 50 else obj.text
+
+    text_preview.short_description = 'Текст вопроса'

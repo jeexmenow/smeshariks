@@ -8,15 +8,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
-            --primary-color: #25D366;
-            --primary-dark: #128C7E;
-            --client-bubble: #FFFFFF;
-            --operator-bubble: #DCF8C6;
-            --background: #EDEDED;
-            --header-bg: #075E54;
-            --text-dark: #4A4A4A;
-            --text-light: #FFFFFF;
-            --hint-bg: #FFF9C4;
+            --primary-color: #00aaff;
+            --secondary-color: #f0f2f5;
+            --client-bubble: #fff;
+            --operator-bubble: #e0f7fa;
+            --background: #f0f2f5;
+            --header-bg: #00aaff;
+            --text-dark: #333;
+            --text-light: #fff;
+            --hint-bg: #fff3cd;
             --shadow: 0 2px 5px rgba(0,0,0,0.1);
             --transition: all 0.3s ease;
         }
@@ -34,17 +34,19 @@
             display: flex;
             flex-direction: column;
             color: var(--text-dark);
+            overflow: hidden;
         }
 
         .header {
             background-color: var(--header-bg);
             color: var(--text-light);
-            padding: 15px 20px;
+            padding: 10px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             box-shadow: var(--shadow);
-            position: relative;
+            position: sticky;
+            top: 0;
             z-index: 10;
         }
 
@@ -79,7 +81,7 @@
             font-weight: 500;
         }
 
-        .logout-button {
+        .logout-button, .admin-button {
             color: var(--text-light);
             text-decoration: none;
             font-size: 14px;
@@ -91,22 +93,105 @@
             gap: 5px;
         }
 
-        .logout-button:hover {
+        .logout-button:hover, .admin-button:hover {
             background-color: rgba(255,255,255,0.2);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .dialogs-panel {
+            width: 350px;
+            background-color: #fff;
+            border-right: 1px solid #e9ecef;
+            overflow-y: auto;
+            padding: 10px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .dialog-item {
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-radius: 8px;
+            margin: 5px 10px;
+            position: relative;
+        }
+
+        .dialog-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dialog-item.active {
+            background-color: #e9ecef;
+            font-weight: 500;
+        }
+
+        .dialog-item.unread .dialog-info .last-message::after {
+            content: '•';
+            color: var(--primary-color);
+            margin-left: 5px;
+        }
+
+        .dialog-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .dialog-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .dialog-info .client-name {
+            font-weight: 500;
+            font-size: 15px;
+            color: #212529;
+        }
+
+        .dialog-info .last-message {
+            font-size: 13px;
+            color: #6c757d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .close-button {
+            background-color: #dc3545;
+            color: var(--text-light);
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 12px;
+            padding: 0;
+        }
+
+        .close-button:hover {
+            background-color: #c82333;
         }
 
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-            background-color: #E5DDD5;
-            background-image: url("https://web.whatsapp.com/img/bg-chat-tile-light_a4be512e7195b6b733d9110b408f075d.png");
+            background-color: var(--background);
             position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
         }
 
         .chat-messages {
@@ -116,162 +201,169 @@
             display: flex;
             flex-direction: column;
             scroll-behavior: smooth;
+            background-image: url("https://web.whatsapp.com/img/bg-chat-tile-light_a4be512e7195b6b733d9110b408f075d.png");
         }
 
         .message {
-            max-width: 75%;
+            max-width: 60%;
             margin-bottom: 15px;
-            position: relative;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
             line-height: 1.4;
             word-wrap: break-word;
-            animation: fadeIn 0.4s ease;
-            transition: var(--transition);
-            box-shadow: var(--shadow);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            position: relative;
+            animation: fadeIn 0.3s ease;
         }
 
         .client {
             align-self: flex-start;
             background-color: var(--client-bubble);
-            color: var(--text-dark);
             border-top-left-radius: 4px;
+            box-shadow: var(--shadow);
         }
 
         .operator {
             align-self: flex-end;
             background-color: var(--operator-bubble);
-            color: var(--text-dark);
             border-top-right-radius: 4px;
+            box-shadow: var(--shadow);
+        }
+
+        .message.completion {
+            align-self: center;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-weight: 500;
+            text-align: center;
+            max-width: 80%;
+            margin: 10px auto;
+            border-radius: 20px;
+            padding: 8px 15px;
         }
 
         .message-header {
             display: flex;
             align-items: center;
             margin-bottom: 5px;
+            font-size: 12px;
+            color: #6c757d;
         }
 
         .message-avatar {
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             margin-right: 8px;
             object-fit: cover;
         }
 
-        .message-sender {
-            font-weight: 500;
-            font-size: 13px;
-        }
-
         .message-time {
-            display: block;
-            text-align: right;
             font-size: 11px;
-            color: rgba(0,0,0,0.4);
-            margin-top: 5px;
+            color: #6c757d;
+            margin-left: 5px;
         }
 
         .hints-container {
             background-color: var(--hint-bg);
             padding: 15px;
             margin: 10px 20px;
-            border-radius: 12px;
+            border-radius: 8px;
             box-shadow: var(--shadow);
-            animation: slideUp 0.4s ease;
+            animation: slideUp 0.3s ease;
+            display: none;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .hints-container.active {
+            display: block;
         }
 
         .hints-container h3 {
-            color: #5F5F5F;
+            color: #856404;
             font-size: 14px;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .hints-container h3 i {
-            font-size: 16px;
-        }
-
         .hint {
-            background-color: white;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            font-size: 14px;
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 13px;
             cursor: pointer;
             transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hint:last-child {
-            margin-bottom: 0;
+            gap: 8px;
         }
 
         .hint:hover {
-            background-color: #F5F5F5;
+            background-color: #ffeeba;
             transform: translateX(5px);
         }
 
-        .hint::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 3px;
+        .admin-hint {
+            background-color: #d1ecf1;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: default;
+        }
+
+        .hint-button {
             background-color: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin: 10px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .hint-button:hover {
+            background-color: #0099e6;
+            transform: scale(1.05);
         }
 
         .input-container {
-            padding: 12px 15px;
-            background-color: #F0F0F0;
+            padding: 10px 15px;
+            background-color: #fff;
             display: flex;
             align-items: center;
-            border-top: 1px solid #DDD;
+            border-top: 1px solid #e9ecef;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
         }
 
         .input-container input {
             flex: 1;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 24px;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
             outline: none;
-            font-size: 15px;
-            margin-right: 12px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-            transition: var(--transition);
+            font-size: 14px;
+            margin-right: 10px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .input-container input:focus {
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(0,170,255,0.3);
         }
 
         .input-container button {
             background-color: var(--primary-color);
-            color: white;
+            color: var(--text-light);
             border: none;
             border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -281,264 +373,440 @@
         }
 
         .input-container button:hover {
-            background-color: var(--primary-dark);
-            transform: scale(1.05);
+            background-color: #0099e6;
+            transform: scale(1.1);
         }
 
-        .input-container button:active {
-            transform: scale(0.95);
-        }
-
-        .typing-indicator {
-            display: flex;
-            align-self: flex-start;
-            padding: 10px 16px;
-            background-color: white;
+        .wiki-button-fixed {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #6c757d;
+            color: #fff;
+            padding: 8px 12px;
             border-radius: 20px;
-            margin-bottom: 15px;
-            box-shadow: var(--shadow);
-            animation: pulse 1.5s infinite;
+            text-decoration: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
         }
 
-        .typing-dot {
-            width: 7px;
-            height: 7px;
-            background-color: #999;
-            border-radius: 50%;
-            margin: 0 3px;
-            animation: typingAnimation 1.4s infinite ease-in-out;
+        .wiki-button-fixed:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
         }
 
-        /* Анимации */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes typingAnimation {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-5px); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Кастомный скроллбар */
-        .chat-messages::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .chat-messages::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.05);
-        }
-
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.2);
-            border-radius: 3px;
-        }
-
-        .chat-messages::-webkit-scrollbar-thumb:hover {
-            background: rgba(0,0,0,0.3);
-        }
-
-        /* Адаптивность */
         @media (max-width: 768px) {
+            .dialogs-panel {
+                width: 250px;
+            }
+
             .message {
-                max-width: 85%;
-                padding: 10px 14px;
+                max-width: 70%;
             }
 
-            .header h1 {
-                font-size: 18px;
-            }
-
-            .avatar {
-                width: 36px;
-                height: 36px;
+            .input-container input {
+                padding: 8px 12px;
             }
         }
 
         @media (max-width: 480px) {
-            .header {
-                padding: 12px 15px;
+            .dialogs-panel {
+                width: 200px;
+                position: absolute;
+                left: -200px;
+                transition: left 0.3s ease;
             }
 
-            .chat-messages {
-                padding: 15px 12px;
+            .dialogs-panel.open {
+                left: 0;
             }
 
-            .input-container {
-                padding: 10px 12px;
+            .chat-container {
+                margin-left: 0;
             }
 
-            .input-container input {
-                padding: 10px 15px;
-                margin-right: 8px;
+            .toggle-button {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background-color: var(--primary-color);
+                color: #fff;
+                border: none;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                z-index: 1000;
             }
 
-            .input-container button {
-                width: 42px;
-                height: 42px;
+            .toggle-button:hover {
+                background-color: #0099e6;
             }
         }
-    .admin-button {
-            background-color: #6c757d;
-            color: white;
-            text-decoration: none;
-            font-size: 14px;
-            padding: 5px 10px;
-            border-radius: 4px;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-right: 10px;
-        }
-
-        .admin-button:hover {
-            background-color: #5a6268;
-        }
-
-        .user-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .wiki-button-fixed {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background-color: #4e73df;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 50px;
-    text-decoration: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
-
-.wiki-button-fixed:hover {
-    background-color: #3a5bc7;
-    transform: translateY(-3px);
-}
     </style>
 </head>
 <body>
     <div class="header">
         <div class="header-content">
             <div class="user-info">
-                <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="avatar">
-                <h1>Чат для смешариков</h1>
+                <h1>Чат для операторов</h1>
+                <img src="https://proxys.io/img/logo.png">
             </div>
             <div class="user-actions">
-                <span class="username">Рады видеть тебя, {{ user.username }} :)</span>
+                <span class="username">Рады видеть, {{ user.username }} :)</span>
                 {% if user.is_authenticated and user.is_staff %}
                     <a href="/admin/" class="admin-button" target="_blank">
-                        <i class="fas fa-cog"></i>
-                        <span>Ты тут главный, можешь зайти</span>
+                        <i class="fas fa-cog"></i> Вы тут главный, сэр!
                     </a>
-                {% if user.is_authenticated %}
-    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov"
-       class="wiki-button-fixed"
-       target="_blank"
-       title="Документация для операторов">
-        <i class="fas fa-book"></i>
-        <span>База знаний</span>
-    </a>
-{% endif %}
                 {% endif %}
                 <a href="{% url 'logout' %}" class="logout-button">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Выйти</span>
+                    <i class="fas fa-sign-out-alt"></i> Выйти
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="chat-container">
-        <div class="chat-messages" id="messages-container">
-            <!-- Сообщение клиента -->
-            <div class="message client">
-                <div class="message-header">
-                    <img src="{{ client_data.avatar }}" alt="Аватар клиента" class="message-avatar">
-                    <span class="message-sender">Клиент</span>
+    <div class="container">
+        <div class="dialogs-panel" id="dialogs-panel">
+            {% for dialog in dialogs %}
+            <div class="dialog-item {% if dialog.id == current_dialog.id %}active{% endif %} {% if dialog.unread_count > 0 %}unread{% endif %}" data-dialog-id="{{ dialog.id }}">
+                <img src="{{ dialog.client_avatar }}" alt="Аватар клиента">
+                <div class="dialog-info">
+                    <div class="client-name">Клиент #{{ dialog.id }}</div>
+                    <div class="last-message">{{ dialog.messages.last.text|truncatechars:30 }}</div>
                 </div>
-                {{ client_message }}
-                <span class="message-time">{{ current_time }}</span>
+                {% if dialog.unread_count > 0 %}
+                <span class="unread-count">{{ dialog.unread_count }}</span>
+                {% endif %}
+                <button class="close-button" data-dialog-id="{{ dialog.id }}">&times;</button>
             </div>
+            {% empty %}
+            <div class="dialog-item">Нет активных диалогов!</div>
+            {% endfor %}
+        </div>
 
-            <!-- Ответ оператора (если есть) -->
-            {% if user_answer %}
-            <div class="message operator">
-                <div class="message-header">
-                    <img src="{{ user.avatar }}" alt="Ваш аватар" class="message-avatar">
-                    <span class="message-sender">Вы</span>
-                </div>
-                {{ user_answer }}
-                <span class="message-time">{{ current_time }}</span>
-            </div>
-            {% endif %}
-
-            <!-- Подсказки -->
-            {% if hints %}
-            <div class="hints-container">
-                <h3>
-                    <i class="fas fa-lightbulb"></i>
-                    <span>Варианты верных ответов:</span>
-                </h3>
-                {% for hint in hints %}
-                <div class="hint" onclick="insertHint('{{ hint|slice:'11:' }}')">
-                    <i class="fas fa-comment-dots"></i>
-                    {{ hint }}
+        <div class="chat-container">
+            <div class="chat-messages" id="messages-container">
+                {% for message in messages %}
+                <div class="message {% if message.sender %}operator{% else %}client{% endif %}">
+                    <div class="message-header">
+                        <img src="{% if message.sender %}{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}{% else %}{{ current_dialog.client_avatar }}{% endif %}" alt="Аватар" class="message-avatar">
+                        <span class="message-sender">{% if message.sender %}Вы{% else %}Клиент{% endif %}</span>
+                        <span class="message-time">{{ message.timestamp|date:"H:i" }}</span>
+                    </div>
+                    {{ message.text }}
+                    {% if message.admin_comment %}
+                    <div class="admin-comment" style="font-size: 12px; color: #666; margin-top: 5px;">
+                        Комментарий администратора: {{ message.admin_comment }}
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
-            {% endif %}
-        </div>
 
-        <!-- Поле ввода -->
-        <form method="post" class="input-container">
-            {% csrf_token %}
-            <input type="text" name="user_answer" placeholder="Введите ваш ответ..." autocomplete="off" required id="message-input">
-            <button type="submit">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                </svg>
-            </button>
-        </form>
+            <button class="hint-button" id="hint-button">Получить подсказку</button>
+            <div class="hints-container" id="hints-container">
+                <h3><i class="fas fa-lightbulb"></i> Подсказки для диалога</h3>
+                {% for hint in hints %}
+                <div class="hint">{{ hint }}</div>
+                {% endfor %}
+                {% if admin_comment %}
+                <div class="admin-hint">Комментарий администратора: {{ admin_comment }}</div>
+                {% endif %}
+            </div>
+
+            <form class="input-container" id="message-form">
+                {% csrf_token %}
+                <input type="hidden" name="dialog_id" id="current-dialog-id" value="{{ current_dialog.id }}">
+                <input type="text" name="user_answer" placeholder="Введите ответ..." autocomplete="off" required id="message-input">
+                <button type="submit"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
     </div>
 
+    {% if user.is_authenticated %}
+    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov" class="wiki-button-fixed" target="_blank">
+        <i class="fas fa-book"></i> База знаний
+    </a>
+    {% endif %}
+
+    <button class="toggle-button" id="toggle-button" style="display: none;">☰</button>
+
     <script>
-        // Автоматическая прокрутка вниз
         const messagesContainer = document.getElementById('messages-container');
+        const dialogsPanel = document.getElementById('dialogs-panel');
+        const messageForm = document.getElementById('message-form');
+        const currentDialogId = document.getElementById('current-dialog-id');
+        const hintsContainer = document.getElementById('hints-container');
+        const hintButton = document.getElementById('hint-button');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const toggleButton = document.getElementById('toggle-button');
+
+        // Прокрутка вниз
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // Вставка подсказки в поле ввода
-        function insertHint(text) {
-            const input = document.getElementById('message-input');
-            input.value = text;
-            input.focus();
+       // Отправка сообщения
+messageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value.trim();
+    if (message) {
+        fetch('/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `text=${encodeURIComponent(message)}&dialog_id=${currentDialogId.value}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                messageInput.value = '';
+
+                // Добавляем сообщение оператора
+                const operatorDiv = document.createElement('div');
+                operatorDiv.className = 'message operator';
+                operatorDiv.innerHTML = `
+                    <div class="message-header">
+                        <img src="{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}" alt="Аватар" class="message-avatar">
+                        <span class="message-sender">Вы</span>
+                        <span class="message-time">${data.timestamp}</span>
+                    </div>
+                    ${data.message}
+                `;
+                messagesContainer.appendChild(operatorDiv);
+
+                // Добавляем ответ клиента
+                const clientDiv = document.createElement('div');
+                clientDiv.className = 'message client';
+                clientDiv.innerHTML = `
+                    <div class="message-header">
+                        <img src="{{ current_dialog.client_avatar }}" alt="Аватар" class="message-avatar">
+                        <span class="message-sender">Клиент</span>
+                        <span class="message-time">${data.new_timestamp}</span>
+                    </div>
+                    ${data.new_message}
+                `;
+                messagesContainer.appendChild(clientDiv);
+
+                // Добавляем сообщение о завершении диалога
+                const completionDiv = document.createElement('div');
+                completionDiv.className = 'message completion';
+                completionDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-sender">Система</span>
+                        <span class="message-time">${data.completion_timestamp}</span>
+                    </div>
+                    ${data.completion_message}
+                `;
+                messagesContainer.appendChild(completionDiv);
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // Обновляем список диалогов
+                updateDialogs(data.dialogs);
+
+                // Если есть новый диалог, переключаемся на него
+                if (data.new_dialog_id) {
+                    currentDialogId.value = data.new_dialog_id;
+                    updateDialogs();
+                    setTimeout(() => {
+                        updateChat(data.new_dialog_id);
+                    }, 100);
+                    document.getElementById('message-input').value = '';
+                }
+
+                // Если вопросов больше нет, показываем уведомление
+                if (data.no_more_questions) {
+                    const endDiv = document.createElement('div');
+                    endDiv.className = 'message completion';
+                    endDiv.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-sender">Система</span>
+                        </div>
+                        Все вопросы завершены! Поздравляем!`;
+                    messagesContainer.appendChild(endDiv);
+                }
+            }
+        });
+    }
+});
+
+// Обновление списка диалогов с переданными данными
+function updateDialogs(dialogsData) {
+    dialogsPanel.innerHTML = '';
+    dialogsData.forEach(d => {
+        const div = document.createElement('div');
+        div.className = `dialog-item ${d.id == currentDialogId.value ? 'active' : ''} ${d.unread_count > 0 ? 'unread' : ''}`;
+        div.setAttribute('data-dialog-id', d.id);
+        div.innerHTML = `
+            <img src="${d.client_avatar}" alt="Аватар клиента">
+            <div class="dialog-info">
+                <div class="client-name">Клиент #${d.id}</div>
+                <div class="last-message">${d.last_message}</div>
+            </div>
+            ${d.unread_count > 0 ? `<span class="unread-count">${d.unread_count}</span>` : ''}
+            <button class="close-button" data-dialog-id="${d.id}">&times;</button>
+        `;
+        dialogsPanel.appendChild(div);
+    });
+}
+
+        // Переключение диалогов
+        dialogsPanel.addEventListener('click', (e) => {
+            const dialogItem = e.target.closest('.dialog-item');
+            if (dialogItem && !e.target.classList.contains('close-button')) {
+                const dialogId = dialogItem.getAttribute('data-dialog-id');
+                currentDialogId.value = dialogId;
+                updateChat(dialogId);
+                updateDialogs();
+                // Сбрасываем непрочитанные для выбранного диалога
+                fetch('/mark_read/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `dialog_id=${dialogId}`
+                }).then(() => updateDialogs());
+            }
+        });
+
+        // Закрытие диалога
+        dialogsPanel.addEventListener('click', (e) => {
+            const closeButton = e.target.closest('.close-button');
+            if (closeButton) {
+                const dialogId = closeButton.getAttribute('data-dialog-id');
+                fetch('/close_dialog/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `dialog_id=${dialogId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        updateDialogs();
+                        if (currentDialogId.value == dialogId) {
+                            const firstDialog = Dialog.objects.filter(user=request.user, is_completed=False, is_closed=False).first();
+                            if (firstDialog) {
+                                currentDialogId.value = firstDialog.id;
+                                updateChat(firstDialog.id);
+                            } else {
+                                messagesContainer.innerHTML = '<div class="message">Нет активных диалогов</div>';
+                                hintsContainer.classList.remove('active');
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Обновление чата
+        function updateChat(dialogId) {
+            fetch('/get_dialog_data/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `dialog_id=${dialogId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    messagesContainer.innerHTML = '';
+                    data.messages.forEach(msg => {
+                        const div = document.createElement('div');
+                        div.className = `message ${msg.sender === 'operator' ? 'operator' : 'client'}`;
+                        div.innerHTML = `
+                            <div class="message-header">
+                                <img src="${msg.sender === 'operator' ? '{{ user.avatar|default:"https://i.pravatar.cc/150?img=15" }}' : data.dialogs.find(d => d.id == dialogId).client_avatar}" alt="Аватар" class="message-avatar">
+                                <span class="message-sender">${msg.sender === 'operator' ? 'Вы' : 'Клиент'}</span>
+                                <span class="message-time">${msg.timestamp}</span>
+                            </div>
+                            ${msg.text}
+                            ${msg.admin_comment ? `<div class="admin-comment" style="font-size: 12px; color: #666; margin-top: 5px;">Комментарий администратора: ${msg.admin_comment}</div>` : ''}
+                        `;
+                        messagesContainer.appendChild(div);
+                    });
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    hintsContainer.classList.remove('active'); // Скрываем подсказки при переключении
+                }
+            });
         }
 
-        // Фокус на поле ввода при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('message-input').focus();
-        });
-
-        // Плавная прокрутка при добавлении новых сообщений
-        const observer = new MutationObserver(() => {
-            messagesContainer.scrollTo({
-                top: messagesContainer.scrollHeight,
-                behavior: 'smooth'
+        // Обновление списка диалогов
+        function updateDialogs() {
+            fetch('/get_dialog_data/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `dialog_id=${currentDialogId.value}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    dialogsPanel.innerHTML = '';
+                    data.dialogs.forEach(d => {
+                        const div = document.createElement('div');
+                        div.className = `dialog-item ${d.id == currentDialogId.value ? 'active' : ''} ${d.unread_count > 0 ? 'unread' : ''}`;
+                        div.setAttribute('data-dialog-id', d.id);
+                        div.innerHTML = `
+                            <img src="${d.client_avatar}" alt="Аватар клиента">
+                            <div class="dialog-info">
+                                <div class="client-name">Клиент #${d.id}</div>
+                                <div class="last-message">${d.last_message}</div>
+                            </div>
+                            ${d.unread_count > 0 ? `<span class="unread-count">${d.unread_count}</span>` : ''}
+                            <button class="close-button" data-dialog-id="${d.id}">&times;</button>
+                        `;
+                        dialogsPanel.appendChild(div);
+                    });
+                }
             });
-        });
+        }
 
-        observer.observe(messagesContainer, {
-            childList: true,
-            subtree: true
+        // Инициализация
+        updateChat(currentDialogId.value);
+        updateDialogs();
+
+        // Мобильная версия
+        if (window.innerWidth <= 480) {
+            toggleButton.style.display = 'flex';
+            let isOpen = false;
+            toggleButton.addEventListener('click', () => {
+                isOpen = !isOpen;
+                dialogsPanel.classList.toggle('open', isOpen);
+                toggleButton.textContent = isOpen ? '×' : '☰';
+            });
+        }
+
+        // Показ/скрытие подсказок при клике на кнопку
+        hintButton.addEventListener('click', () => {
+            hintsContainer.classList.toggle('active');
         });
     </script>
 </body>

@@ -3,17 +3,88 @@
 <head>
     <title>Вход</title>
     <style>
+        body {
+            background: #f0f2f5;
+            font-family: 'Roboto', sans-serif;
+        }
         .auth-form {
             max-width: 400px;
             margin: 50px auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 30px 25px 25px 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 24px rgba(0,170,255,0.08);
         }
-        .auth-form input {
+        .auth-form h2 {
+            text-align: center;
+            color: #00aaff;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .auth-form input[type="text"],
+        .auth-form input[type="password"],
+        .auth-form input[type="email"] {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
+            padding: 12px 15px;
+            margin: 10px 0 18px 0;
+            border: 1px solid #b0bec5;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border 0.2s;
+        }
+        .auth-form input:focus {
+            border: 1.5px solid #00aaff;
+            outline: none;
+        }
+        .auth-form button {
+            width: 100%;
+            padding: 12px;
+            background: #00aaff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .auth-form button:hover {
+            background: #0099e6;
+        }
+        .auth-form p {
+            margin: 0 0 18px 0;
+            padding: 0;
+        }
+        .auth-form label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #333;
+        }
+        .auth-form input[type="text"],
+        .auth-form input[type="password"],
+        .auth-form input[type="email"] {
+            width: 100%;
+            box-sizing: border-box;
+            display: block;
+        }
+        .auth-form ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+        .auth-form li {
+            margin-bottom: 4px;
+            font-size: 14px;
+            color: #444;
+        }
+        .auth-form a {
+            color: #00aaff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-form a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -25,7 +96,7 @@
             {{ form.as_p }}
             <button type="submit">Войти</button>
         </form>
-        <p>А тут можно создать аккаунт, да-да. <a href="{% url 'register' %}">Регистрируйся!</a></p>
+       <br><p>А тут можно создать аккаунт, да-да <a href="{% url 'register' %}">Регистрируйся!</a></p>
     </div>
 </body>
 </html>
