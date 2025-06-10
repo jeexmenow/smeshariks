@@ -460,6 +460,15 @@
                 background-color: #0099e6;
             }
         }
+         body.dark {
+            --background: #181c22;
+            --form-bg: #23272f;
+            --text-dark: #f0f2f5;
+            --input-bg: #23272f;
+            --input-border: #444b5a;
+            --button-bg: #005f7f;
+            --button-hover: #0088cc;
+        }
     </style>
 </head>
 <body>
@@ -482,6 +491,7 @@
             </div>
         </div>
     </div>
+    <button id="theme-toggle" style="position:fixed;top:10px;right:10px;z-index:999;">🌙</button>
 
     <div class="container">
         <div class="dialogs-panel" id="dialogs-panel">
@@ -808,6 +818,10 @@ function updateDialogs(dialogsData) {
         hintButton.addEventListener('click', () => {
             hintsContainer.classList.toggle('active');
         });
+
+        document.getElementById('theme-toggle').onclick = function() {
+    document.body.classList.toggle('dark');
+};
     </script>
 </body>
 </html>
