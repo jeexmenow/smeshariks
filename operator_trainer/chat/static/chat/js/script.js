@@ -88,112 +88,123 @@ function updateProgressIndicator(currentStep, maxSteps, isMultiStep) {
 }
 
 // Отправка сообщения
-messageForm.addEventListener('submit', (e) => {
+messageForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const messageInput = document.getElementById('message-input');
+    const sendButton = messageForm.querySelector('button[type="submit"]');
     const message = messageInput.value.trim();
-    if (message) {
-        fetch('/send/', {
+
+    if (!message || sendButton.disabled) {
+        return;
+    }
+
+    // Сохраняем иконку и активируем состояние загрузки
+    const originalButtonContent = sendButton.innerHTML;
+    sendButton.innerHTML = '<div class="spinner"></div>';
+    sendButton.disabled = true;
+
+    try {
+        const response = await fetch('/send/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'X-CSRFToken': csrfToken
             },
             body: `text=${encodeURIComponent(message)}&dialog_id=${currentDialogId.value}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ok') {
-                messageInput.value = '';
+        });
 
-                // Добавляем сообщение оператора
-                const operatorDiv = document.createElement('div');
-                operatorDiv.className = 'message operator';
-                operatorDiv.innerHTML = `
-                    <div class="message-header">
-                        <img src="{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}" alt="Аватар" class="message-avatar">
-                        <span class="message-sender">Вы</span>
-                        <span class="message-time">${data.timestamp}</span>
-                    </div>
-                    ${data.message}
-                `;
-                messagesContainer.appendChild(operatorDiv);
+        if (!response.ok) {
+            throw new Error(`Ошибка сети: ${response.statusText}`);
+        }
 
-                // Добавляем ответ клиента
+        const data = await response.json();
+
+        if (data.status === 'ok') {
+            messageInput.value = '';
+
+            // Добавляем сообщение оператора
+            const operatorDiv = document.createElement('div');
+            operatorDiv.className = 'message operator new-message'; // Добавляем класс для анимации
+            operatorDiv.innerHTML = `
+                <div class="message-header">
+                    <img src="${userAvatar}" alt="Аватар" class="message-avatar">
+                    <span class="message-sender">Вы</span>
+                    <span class="message-time">${data.timestamp}</span>
+                </div>
+                ${escapeHTML(data.message)}
+            `;
+            messagesContainer.appendChild(operatorDiv);
+
+            // Обработка ответа
+            if (data.continue_dialog) {
+                // Если диалог продолжается
                 const clientDiv = document.createElement('div');
-                clientDiv.className = 'message client';
+                clientDiv.className = 'message client new-message';
                 clientDiv.innerHTML = `
                     <div class="message-header">
-                        <img src="{{ current_dialog.client_avatar }}" alt="Аватар" class="message-avatar">
+                        <img src="${dialogClientAvatar}" alt="Аватар" class="message-avatar">
                         <span class="message-sender">Клиент</span>
                         <span class="message-time">${data.new_timestamp}</span>
                     </div>
-                    ${data.new_message}
+                    ${escapeHTML(data.new_message)}
                 `;
                 messagesContainer.appendChild(clientDiv);
-
-                // Если диалог продолжается (многошаговый)
-                if (data.continue_dialog) {
-                    // Обновляем индикатор прогресса
-                    updateProgressIndicator(data.current_step, data.max_steps, true);
-                    
-                    // Показываем уведомление о продолжении диалога
-                    const continueDiv = document.createElement('div');
-                    continueDiv.className = 'message completion';
-                    continueDiv.style.backgroundColor = '#e3f2fd';
-                    continueDiv.style.color = '#1976d2';
-                    continueDiv.innerHTML = `
-                        <div class="message-header">
-                            <span class="message-sender">Система</span>
-                            <span class="message-time">${data.new_timestamp}</span>
-                        </div>
-                        Диалог продолжается... Следующий шаг: ${data.current_step}/${data.max_steps}
-                    `;
-                    messagesContainer.appendChild(continueDiv);
-                } else if (data.completion_message) {
-                    // Добавляем сообщение о завершении диалога
-                    const completionDiv = document.createElement('div');
-                    completionDiv.className = 'message completion';
-                    completionDiv.innerHTML = `
-                        <div class="message-header">
-                            <span class="message-sender">Система</span>
-                            <span class="message-time">${data.completion_timestamp}</span>
-                        </div>
-                        ${data.completion_message}
-                    `;
-                    messagesContainer.appendChild(completionDiv);
-                }
-
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                // Обновляем список диалогов
-                updateDialogs(data.dialogs);
-
-                // Если есть новый диалог, переключаемся на него
-                if (data.new_dialog_id) {
-                    currentDialogId.value = data.new_dialog_id;
-                    updateDialogs();
-                    setTimeout(() => {
-                        updateChat(data.new_dialog_id);
-                    }, 100);
-                    document.getElementById('message-input').value = '';
-                }
-
-                // Если вопросов больше нет, показываем уведомление
-                if (data.no_more_questions) {
-                    const endDiv = document.createElement('div');
-                    endDiv.className = 'message completion';
-                    endDiv.innerHTML = `
-                        <div class="message-header">
-                            <span class="message-sender">Система</span>
-                        </div>
-                        Все вопросы завершены! Поздравляем!`;
-                    messagesContainer.appendChild(endDiv);
-                }
+                updateProgressIndicator(data.current_step, data.max_steps, true);
+            } else if (data.completion_message) {
+                // Если диалог завершен
+                const completionDiv = document.createElement('div');
+                completionDiv.className = 'message completion new-message';
+                completionDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-sender">Система</span>
+                        <span class="message-time">${data.completion_timestamp}</span>
+                    </div>
+                    ${escapeHTML(data.completion_message)}
+                `;
+                messagesContainer.appendChild(completionDiv);
             }
-        });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            updateDialogs(data.dialogs);
+
+            if (data.new_dialog_id) {
+                // Переключаемся на новый диалог
+                setTimeout(() => {
+                    updateChat(data.new_dialog_id);
+                    currentDialogId.value = data.new_dialog_id; // Обновляем ID после загрузки
+                }, 200);
+            } else if (data.no_more_questions) {
+                // Если вопросов больше нет
+                const endDiv = document.createElement('div');
+                endDiv.className = 'message completion new-message';
+                endDiv.innerHTML = `Все вопросы завершены! Поздравляем!`;
+                messagesContainer.appendChild(endDiv);
+            }
+        } else {
+            throw new Error(data.message || 'Произошла неизвестная ошибка');
+        }
+    } catch (error) {
+        console.error("Ошибка при отправке сообщения:", error);
+        // Здесь можно добавить уведомление для пользователя
+        alert(`Не удалось отправить сообщение: ${error.message}`);
+    } finally {
+        // Возвращаем кнопку в исходное состояние
+        sendButton.innerHTML = originalButtonContent;
+        sendButton.disabled = false;
     }
 });
+
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
 
 // Обновление списка диалогов с переданными данными
 function updateDialogs(dialogsData) {

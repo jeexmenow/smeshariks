@@ -377,6 +377,34 @@ body {
     transform: scale(1.1);
 }
 
+/* Добавляем стили для состояния загрузки */
+.input-container button:disabled {
+    background-color: #b0bec5; /* Нейтральный цвет для неактивной кнопки */
+    cursor: not-allowed;
+    transform: none; /* Убираем эффект увеличения */
+}
+
+/* Скрываем иконку отправки, когда кнопка неактивна */
+.input-container button:disabled .fa-paper-plane {
+    display: none;
+}
+
+/* Стили для спиннера */
+.spinner {
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    border-top-color: #fff;
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .wiki-button-fixed {
     position: fixed;
     bottom: 20px;
@@ -407,6 +435,22 @@ body {
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Новая, более плавная анимация для сообщений */
+@keyframes slideIn {
+    from {
+        opacity: 0.5;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message.new-message {
+    animation: slideIn 0.4s ease-out;
 }
 
 @media (max-width: 768px) {
