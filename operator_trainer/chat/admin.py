@@ -97,7 +97,10 @@ class QuestionAdmin(admin.ModelAdmin):
     list_display = ('text_preview', 'max_steps', 'created_at', 'hints_preview', 'responses_preview')
     search_fields = ('text',)
     list_filter = ('created_at', 'max_steps')
-    fields = ('text', 'hints', 'client_responses', 'max_steps', 'stop_words')
+    fields = ('text', 'is_multi_step', 'max_steps', 'stop_words', 'hints', 'client_responses')
+
+    class Media:
+        js = ('chat/js/question_admin.js',)
 
     def hints_preview(self, obj):
         return ", ".join(obj.get_hints_list())

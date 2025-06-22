@@ -19,7 +19,8 @@ class Question(models.Model):
         blank=True,
         help_text="Через запятую, например: Ответ 1, Ответ 2. Если пусто, будут использованы стандартные ответы."
     )
-    max_steps = models.IntegerField(default=1, help_text="Количество шагов в этом вопросе (для многошаговых диалогов)")
+    is_multi_step = models.BooleanField("Многошаговый", default=False, help_text="Активируйте, если у вопроса несколько шагов")
+    max_steps = models.IntegerField("Макс. шагов", default=1, help_text="Количество шагов в этом вопросе (для многошаговых диалогов)")
     stop_words = models.CharField(max_length=255, blank=True, help_text="Стоп-слова для завершения диалога, через запятую")
 
     def get_hints_list(self):
