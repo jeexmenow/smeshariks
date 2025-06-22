@@ -1,0 +1,1 @@
+# Chat static files package 
