@@ -2,10 +2,10 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
-import random, logging
+import random, logging, time
 from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm
-from .models import Dialog, Message, CustomUser, Question, UserResponse
+from .models import Dialog, Message, CustomUser, Question, UserResponse, DialogStep
 import string
 import random as random_module
 from django.utils import timezone
@@ -65,12 +65,12 @@ def chat_trainer(request):
             return render(request, 'chat/no_more_dialogs.html', {'message': 'Диалогов больше нет :('})
 
         question = random.choice(available_questions)
-        avatar_num = random_module.randint(1, 20)
+        avatar_num = random_module.randint(1, 1000)
         dialog = Dialog.objects.create(
             user=request.user,
             question=question,
-            is_multi_step=(question.max_steps > 1),
-            client_avatar=f'https://i.pravatar.cc/150?img={avatar_num}'
+            is_multi_step=question.is_multi_step,
+            client_avatar=f'https://api.dicebear.com/8.x/pixel-art/png?seed={avatar_num}'
         )
         Message.objects.create(
             dialog=dialog,
@@ -149,35 +149,69 @@ def send_message(request):
             return create_new_dialog_response(user, dialog, message, completion_message)
 
         # Логика многошагового диалога
-        if dialog.is_multi_step and dialog.current_step < question.max_steps:
-            dialog.current_step = F('current_step') + 1
-            dialog.save()
-            dialog.refresh_from_db()  # Обновляем объект из БД, чтобы получить новое значение current_step
+        if dialog.is_multi_step:
+            # Находим текущий и следующий шаг
+            current_step_number = dialog.current_step
+            next_step_number = current_step_number + 1
 
-            client_responses = question.get_client_responses_list()
-            client_response = random.choice(client_responses)
-            client_msg = Message.objects.create(dialog=dialog, sender=None, text=client_response)
+            # Сохраняем ответ оператора
+            user_response_obj = UserResponse.objects.create(
+                user=user,
+                question=question,
+                answer=text,
+                # is_correct можно будет реализовать позже, сравнив с expected_operator_response
+            )
 
-            return JsonResponse({
-                'status': 'ok',
-                'continue_dialog': True,
-                'message': message.text,
-                'timestamp': message.timestamp.strftime("%H:%M"),
-                'new_message': client_msg.text,
-                'new_timestamp': client_msg.timestamp.strftime("%H:%M"),
-                'current_step': dialog.current_step,
-                'max_steps': question.max_steps,
-                'dialogs': get_dialogs_data_for_user(user)
-            })
+            # Пытаемся найти следующий шаг
+            next_step = DialogStep.objects.filter(question=question, step_number=next_step_number).first()
 
-        # Если это был последний шаг или не многошаговый диалог
+            if next_step:
+                # Если есть следующий шаг, продолжаем диалог
+                dialog.current_step = next_step_number
+                dialog.save()
+
+                # Имитируем задержку на "печать"
+                delay = min(len(next_step.client_message) * 0.05, 2.5)
+                time.sleep(delay)
+
+                client_msg = Message.objects.create(dialog=dialog, sender=None, text=next_step.client_message)
+
+                return JsonResponse({
+                    'status': 'ok',
+                    'continue_dialog': True,
+                    'message': message.text,
+                    'timestamp': timezone.localtime(message.timestamp).strftime("%H:%M"),
+                    'new_message': client_msg.text,
+                    'new_timestamp': timezone.localtime(client_msg.timestamp).strftime("%H:%M"),
+                    'current_step': dialog.current_step,
+                    'max_steps': question.steps.count() + 1,
+                    'dialogs': get_dialogs_data_for_user(user)
+                })
+            else:
+                # Если следующего шага нет, завершаем диалог
+                dialog.is_completed = True
+                dialog.end_time = timezone.now()
+                dialog.save()
+                completion_text = "Вы молодец! Диалог завершен."
+                # Имитируем задержку на "печать"
+                delay = min(len(completion_text) * 0.05, 2.5)
+                time.sleep(delay)
+                completion_message = Message.objects.create(dialog=dialog, sender=None, text=completion_text)
+                return create_new_dialog_response(user, dialog, message, completion_message)
+
+        # Если не многошаговый диалог, то завершаем как обычно
         dialog.is_completed = True
         dialog.end_time = timezone.now()
         dialog.save()
 
         UserResponse.objects.create(user=user, question=question, answer=text)
 
-        completion_message = Message.objects.create(dialog=dialog, sender=None, text="Вы молодец! Диалог завершен.")
+        completion_text = "Вы молодец! Диалог завершен."
+        # Имитируем задержку на "печать"
+        delay = min(len(completion_text) * 0.05, 2.5)
+        time.sleep(delay)
+
+        completion_message = Message.objects.create(dialog=dialog, sender=None, text=completion_text)
         return create_new_dialog_response(user, dialog, message, completion_message)
 
     except Exception as e:
@@ -191,12 +225,12 @@ def create_new_dialog_response(user, old_dialog, operator_message, completion_me
     new_dialog = None
     if available_questions.exists():
         new_question = random.choice(available_questions)
-        avatar_num = random.randint(1, 20)
+        avatar_num = random.randint(1, 1000)
         new_dialog = Dialog.objects.create(
             user=user,
             question=new_question,
-            is_multi_step=(new_question.max_steps > 1),
-            client_avatar=f'https://i.pravatar.cc/150?img={avatar_num}'
+            is_multi_step=new_question.is_multi_step,
+            client_avatar=f'https://api.dicebear.com/8.x/pixel-art/png?seed={avatar_num}'
         )
         Message.objects.create(dialog=new_dialog, sender=None, text=new_question.text)
 
@@ -204,9 +238,9 @@ def create_new_dialog_response(user, old_dialog, operator_message, completion_me
         'status': 'ok',
         'continue_dialog': False,
         'message': operator_message.text,
-        'timestamp': operator_message.timestamp.strftime("%H:%M"),
+        'timestamp': timezone.localtime(operator_message.timestamp).strftime("%H:%M"),
         'completion_message': completion_message.text,
-        'completion_timestamp': completion_message.timestamp.strftime("%H:%M"),
+        'completion_timestamp': timezone.localtime(completion_message.timestamp).strftime("%H:%M"),
         'new_dialog_id': new_dialog.id if new_dialog else None,
         'no_more_questions': not available_questions.exists(),
         'dialogs': get_dialogs_data_for_user(user)
@@ -235,7 +269,7 @@ def get_dialog_data(request):
             messages = [{
                 'text': msg.text,
                 'sender': 'operator' if msg.sender else 'client',
-                'timestamp': msg.timestamp.strftime("%H:%M"),
+                'timestamp': timezone.localtime(msg.timestamp).strftime("%H:%M"),
                 'admin_comment': msg.admin_comment if msg.admin_comment else ''
             } for msg in dialog.messages.all()]
             dialogs_data = get_dialogs_data_for_user(request.user)

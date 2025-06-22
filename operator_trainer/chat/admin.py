@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from .models import Dialog, Message, CustomUser, Question
+from .models import Dialog, Message, CustomUser, Question, DialogStep
 from django.utils.html import format_html
 
 
@@ -14,6 +14,22 @@ class MessageInline(admin.TabularInline):
         return obj.dialog.user.email if obj.dialog and obj.dialog.user else '-'
 
     get_user_email.short_description = 'Email'
+
+
+class DialogStepInline(admin.TabularInline):
+    model = DialogStep
+    extra = 1
+    fieldsets = [
+        (None, {
+            'fields': (
+                ('step_number', 'trigger_keywords'),
+                'client_message',
+                'expected_operator_response',
+                'response_variation'
+            )
+        })
+    ]
+    sortable_field_name = "step_number"
 
 
 @admin.register(Dialog)
@@ -98,6 +114,7 @@ class QuestionAdmin(admin.ModelAdmin):
     search_fields = ('text',)
     list_filter = ('created_at', 'max_steps')
     fields = ('text', 'is_multi_step', 'max_steps', 'stop_words', 'hints', 'client_responses')
+    inlines = [DialogStepInline]
 
     class Media:
         js = ('chat/js/question_admin.js',)

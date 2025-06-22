@@ -1,5 +1,7 @@
 // Resave to trigger Git
 // Глобальные переменные
+let userAvatar = window.userAvatar || 'https://github.com/identicons/default.png';
+let dialogClientAvatar = window.dialogClientAvatar || 'https://api.dicebear.com/8.x/pixel-art/png?seed=client';
 const messagesContainer = document.getElementById('messages-container');
 const dialogsPanel = document.getElementById('dialogs-panel');
 const messageForm = document.getElementById('message-form');
@@ -327,10 +329,10 @@ function updateChat(dialogId) {
             messagesContainer.innerHTML = '';
             data.messages.forEach(msg => {
                 const div = document.createElement('div');
-                div.className = `message ${msg.sender === 'operator' ? 'operator' : 'client'}`;
+                div.className = `message ${msg.sender}`;
                 div.innerHTML = `
                     <div class="message-header">
-                        <img src="${msg.sender === 'operator' ? '{{ user.avatar|default:"https://i.pravatar.cc/150?img=15" }}' : data.dialogs.find(d => d.id == dialogId).client_avatar}" alt="Аватар" class="message-avatar">
+                        <img src="${msg.sender === 'operator' ? userAvatar : dialogClientAvatar}" alt="Аватар" class="message-avatar">
                         <span class="message-sender">${msg.sender === 'operator' ? 'Вы' : 'Клиент'}</span>
                         <span class="message-time">${msg.timestamp}</span>
                         ${msg.step_number > 1 ? `<span class="step-indicator" style="font-size: 10px; color: #999;">Шаг ${msg.step_number}</span>` : ''}
@@ -360,9 +362,4 @@ function updateChat(dialogId) {
 // Показ/скрытие подсказок при клике на кнопку
 hintButton.addEventListener('click', () => {
     hintsContainer.classList.toggle('active');
-});
-
-// Переключение темы
-document.getElementById('theme-toggle').onclick = function() {
-    document.body.classList.toggle('dark');
-}; 
+}); 

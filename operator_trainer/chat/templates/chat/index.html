@@ -17,19 +17,14 @@
                 <img src="https://proxys.io/img/logo.png">
             </div>
             <div class="user-actions">
-                <span class="username">Рады видеть, {{ user.username }} :)</span>
+                <span class="username"><span class="operator-label">Оператор:</span> {{ user.username }}</span>
                 {% if user.is_authenticated and user.is_staff %}
-                    <a href="/admin/" class="admin-button" target="_blank">
-                        <i class="fas fa-cog"></i> Вы тут главный, сэр!
-                    </a>
+                    <a href="/admin/" class="admin-button" target="_blank">Админ-панель</a>
                 {% endif %}
-                <a href="{% url 'logout' %}" class="logout-button">
-                    <i class="fas fa-sign-out-alt"></i> Выйти
-                </a>
+                <a href="{% url 'logout' %}" class="logout-button">Выход</a>
             </div>
         </div>
     </div>
-    <button id="theme-toggle" style="position:fixed;top:10px;right:10px;z-index:999;">🌙</button>
 
     <div class="container">
         <div class="dialogs-panel" id="dialogs-panel">
@@ -55,7 +50,7 @@
                 {% for message in messages %}
                 <div class="message {% if message.sender %}operator{% else %}client{% endif %}">
                     <div class="message-header">
-                        <img src="{% if message.sender %}{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}{% else %}{{ current_dialog.client_avatar }}{% endif %}" alt="Аватар" class="message-avatar">
+                        <img src="{% if message.sender %}{% if user.avatar %}{{ user.avatar }}{% else %}https://github.com/identicons/default.png{% endif %}{% else %}{{ current_dialog.client_avatar }}{% endif %}" alt="Аватар" class="message-avatar">
                         <span class="message-sender">{% if message.sender %}Вы{% else %}Клиент{% endif %}</span>
                         <span class="message-time">{{ message.timestamp|date:"H:i" }}</span>
                     </div>
@@ -98,10 +93,10 @@
     <button class="toggle-button" id="toggle-button" style="display: none;">☰</button>
 
     <script>
-        const userAvatar = "{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}";
-        const dialogClientAvatar = "{{ current_dialog.client_avatar }}";
+        window.userAvatar = "{% if user.avatar %}{{ user.avatar }}{% else %}https://github.com/identicons/default.png{% endif %}";
+        window.dialogClientAvatar = "{{ current_dialog.client_avatar }}";
     </script>
-    <script src="{% static 'chat/js/script.js' %}"></script>
+    <script src="{% static 'chat/js/script.js' %}?v=1.3"></script>
 </body>
 </html>
 <!-- Resave to trigger Git -->

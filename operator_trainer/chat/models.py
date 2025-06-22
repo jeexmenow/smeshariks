@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 
 
 class CustomUser(AbstractUser):
-    avatar = models.URLField(default='https://i.pravatar.cc/150?img=15')
+    avatar = models.URLField(default='https://github.com/identicons/default.png')
     is_trainer = models.BooleanField(default=False)
 
     def __str__(self):
@@ -57,6 +57,22 @@ class UserResponse(models.Model):
 
     def __str__(self):
         return f"Ответ {self.user.username} на вопрос #{self.question.id}"
+
+
+class DialogStep(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='steps')
+    step_number = models.PositiveIntegerField("Номер шага")
+    trigger_keywords = models.TextField("Триггерные слова", blank=True, help_text="Ключевые слова клиента для этого шага (через запятую).")
+    client_message = models.TextField("Сообщение клиента", help_text="Точное сообщение, которое отправит клиент на этом шаге.")
+    expected_operator_response = models.TextField("Ожидаемый ответ оператора", blank=True, help_text="Правильный ответ, который должен дать оператор.")
+    response_variation = models.TextField("Вариации ответа", blank=True, help_text="Допустимые вариации ответа оператора (через точку с запятой).")
+
+    class Meta:
+        ordering = ['step_number']
+        unique_together = ('question', 'step_number')
+
+    def __str__(self):
+        return f"Шаг {self.step_number} для вопроса #{self.question.id}"
 
 
 class Dialog(models.Model):
