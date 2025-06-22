@@ -10,6 +10,7 @@ import string
 import random as random_module
 from django.utils import timezone
 from django.db.models import F
+from django.views.decorators.http import require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -286,3 +287,5 @@ def close_dialog(request):
         except Exception as e:
             logger.error(f"Ошибка закрытия диалога: {str(e)}")
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+# Это тестовый комментарий для проверки Git.

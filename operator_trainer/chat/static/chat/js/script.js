@@ -1,3 +1,4 @@
+// Resave to trigger Git
 // Глобальные переменные
 const messagesContainer = document.getElementById('messages-container');
 const dialogsPanel = document.getElementById('dialogs-panel');
