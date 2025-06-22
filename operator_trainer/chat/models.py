@@ -19,6 +19,8 @@ class Question(models.Model):
         blank=True,
         help_text="Через запятую, например: Ответ 1, Ответ 2. Если пусто, будут использованы стандартные ответы."
     )
+    max_steps = models.IntegerField(default=1, help_text="Количество шагов в этом вопросе (для многошаговых диалогов)")
+    stop_words = models.CharField(max_length=255, blank=True, help_text="Стоп-слова для завершения диалога, через запятую")
 
     def get_hints_list(self):
         return [h.strip() for h in self.hints.split(',') if h.strip()] if self.hints else []
@@ -58,12 +60,15 @@ class UserResponse(models.Model):
 
 class Dialog(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='dialogs')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='dialogs', null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)
     unread_count = models.IntegerField(default=0, help_text="Количество непрочитанных сообщений")
     client_avatar = models.URLField(default='https://i.pravatar.cc/150?img={random.randint(1, 20)}', help_text="Уникальная аватарка клиента")
     is_closed = models.BooleanField(default=False, help_text="Диалог закрыт и скрыт из чата")
+    is_multi_step = models.BooleanField(default=False, help_text="Это многошаговый диалог?")
+    current_step = models.IntegerField(default=1, help_text="Текущий шаг в многошаговом диалоге")
 
     def __str__(self):
         return f"Диалог с {self.user.username} (ID: {self.id})"

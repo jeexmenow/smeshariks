@@ -18,11 +18,12 @@ class MessageInline(admin.TabularInline):
 
 @admin.register(Dialog)
 class DialogAdmin(admin.ModelAdmin):
-    list_display = ('user', 'user_email', 'start_time', 'end_time', 'is_completed', 'is_closed', 'message_count')
+    list_display = ('user', 'user_email', 'start_time', 'end_time', 'is_completed', 'is_closed', 'is_multi_step', 'current_step', 'message_count')
     list_select_related = ('user',)
     inlines = [MessageInline]
-    list_filter = ('is_completed', 'is_closed', 'start_time', 'user__email')
+    list_filter = ('is_completed', 'is_closed', 'is_multi_step', 'start_time', 'user__email')
     search_fields = ('user__username', 'user__email')
+    readonly_fields = ('current_step',)
 
     def user_email(self, obj):
         return obj.user.email
@@ -93,10 +94,10 @@ class CustomUserAdmin(admin.ModelAdmin):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ('text_preview', 'created_at', 'hints_preview', 'responses_preview')
+    list_display = ('text_preview', 'max_steps', 'created_at', 'hints_preview', 'responses_preview')
     search_fields = ('text',)
-    list_filter = ('created_at',)
-    fields = ('text', 'hints', 'client_responses')
+    list_filter = ('created_at', 'max_steps')
+    fields = ('text', 'hints', 'client_responses', 'max_steps', 'stop_words')
 
     def hints_preview(self, obj):
         return ", ".join(obj.get_hints_list())

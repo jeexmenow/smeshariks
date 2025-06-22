@@ -68,6 +68,8 @@ def chat_trainer(request):
         avatar_num = random_module.randint(1, 20)
         dialog = Dialog.objects.create(
             user=request.user,
+            question=question,
+            is_multi_step=(question.max_steps > 1),
             client_avatar=f'https://i.pravatar.cc/150?img={avatar_num}'
         )
         Message.objects.create(
@@ -84,7 +86,7 @@ def chat_trainer(request):
     client_responses = []
 
     if client_message:
-        question = Question.objects.filter(text=client_message.text).first()
+        question = dialog.question
         if question:
             hints = question.get_hints_list()
             client_responses = question.get_client_responses_list()
@@ -103,126 +105,124 @@ def chat_trainer(request):
         'user': request.user,
         'hints': hints,
         'admin_comment': admin_comment,
-        'client_responses': client_responses
+        'client_responses': client_responses,
+        'is_multi_step': dialog.is_multi_step,
+        'current_step': dialog.current_step,
+        'max_steps': dialog.question.max_steps if dialog.question else 1
     })
 
 
 @login_required
+@require_POST
 def send_message(request):
-    if request.method == 'POST':
-        try:
-            user = request.user
-            text = request.POST.get('text', '').strip()
-            dialog_id = request.POST.get('dialog_id')
+    try:
+        user = request.user
+        text = request.POST.get('text', '').strip()
+        dialog_id = request.POST.get('dialog_id')
 
-            if not text:
-                return JsonResponse({'status': 'error', 'message': 'Текст сообщения не может быть пустым'}, status=400)
+        if not text:
+            return JsonResponse({'status': 'error', 'message': 'Текст сообщения не может быть пустым'}, status=400)
 
-            dialog = Dialog.objects.filter(user=user, id=dialog_id, is_closed=False).first()
-            if not dialog:
-                return JsonResponse({'status': 'error', 'message': 'Диалог не найден'}, status=404)
+        dialog = Dialog.objects.filter(user=user, id=dialog_id, is_closed=False).first()
+        if not dialog:
+            return JsonResponse({'status': 'error', 'message': 'Диалог не найден'}, status=404)
 
-            # Сохраняем ответ оператора
-            message = Message.objects.create(
-                dialog=dialog,
-                sender=user,
-                text=f"Оператор: {text}"
-            )
+        question = dialog.question
+        if not question:
+            return JsonResponse({'status': 'error', 'message': 'Вопрос для диалога не найден'}, status=404)
 
-            # Сохраняем в UserResponse
-            client_message = dialog.messages.filter(sender=None).first()
-            if client_message:
-                question = Question.objects.filter(text=client_message.text).first()
-                if question:
-                    UserResponse.objects.create(
-                        user=user,
-                        question=question,
-                        answer=text
-                    )
+        # Сохраняем ответ оператора
+        message = Message.objects.create(
+            dialog=dialog,
+            sender=user,
+            text=text
+        )
 
-            # Выбираем случайный ответ клиента
-            question = Question.objects.filter(text=client_message.text).first() if client_message else None
-            client_responses = question.get_client_responses_list() if question else [
-                "Спасибо за помощь!",
-                "Понял, спасибо!",
-                "Благодарю за разъяснение!",
-                "Ясно, буду знать!",
-                "Отлично, теперь всё понятно!"
-            ]
-
-            client_response = random.choice(client_responses)
-            client_msg = Message.objects.create(
-                dialog=dialog,
-                sender=None,
-                text=client_response
-            )
-
-            # Помечаем текущий диалог как завершенный
+        # Проверяем на стоп-слова
+        stop_words = [sw.strip().lower() for sw in question.stop_words.split(',') if sw.strip()]
+        if any(sw in text.lower() for sw in stop_words):
             dialog.is_completed = True
             dialog.end_time = timezone.now()
             dialog.save()
+            completion_message = Message.objects.create(dialog=dialog, sender=None, text="Диалог завершен по стоп-слову.")
+            # Логика создания нового диалога
+            return create_new_dialog_response(user, dialog, message, completion_message)
 
-            # Добавляем сообщение о завершении диалога
-            completion_message = Message.objects.create(
-                dialog=dialog,
-                sender=None,
-                text="Вы молодец! Диалог завершен."
-            )
+        # Логика многошагового диалога
+        if dialog.is_multi_step and dialog.current_step < question.max_steps:
+            dialog.current_step = F('current_step') + 1
+            dialog.save()
+            dialog.refresh_from_db()  # Обновляем объект из БД, чтобы получить новое значение current_step
 
-            # Создаем новый диалог с новым вопросом
-            new_dialog = None
-            # Получаем все вопросы, на которые пользователь уже отвечал
-            answered_questions = Question.objects.filter(
-                userresponse__user=user
-            ).distinct()
-
-            # Получаем все доступные вопросы, исключая уже отвеченные
-            available_questions = Question.objects.exclude(
-                id__in=answered_questions.values_list('id', flat=True)
-            )
-
-            if available_questions.exists():
-                new_question = random.choice(available_questions)
-                avatar_num = random_module.randint(1, 20)
-                new_dialog = Dialog.objects.create(
-                    user=user,
-                    client_avatar=f'https://i.pravatar.cc/150?img={avatar_num}'
-                )
-                Message.objects.create(
-                    dialog=new_dialog,
-                    sender=None,
-                    text=new_question.text
-                )
+            client_responses = question.get_client_responses_list()
+            client_response = random.choice(client_responses)
+            client_msg = Message.objects.create(dialog=dialog, sender=None, text=client_response)
 
             return JsonResponse({
                 'status': 'ok',
+                'continue_dialog': True,
                 'message': message.text,
-                'sender': 'operator',
                 'timestamp': message.timestamp.strftime("%H:%M"),
-                'dialog_id': dialog.id,
-                'new_dialog_id': new_dialog.id if new_dialog else None,
                 'new_message': client_msg.text,
-                'new_sender': 'client',
                 'new_timestamp': client_msg.timestamp.strftime("%H:%M"),
-                'completion_message': completion_message.text,
-                'completion_timestamp': completion_message.timestamp.strftime("%H:%M"),
-                'admin_comment': dialog.messages.filter(admin_comment__isnull=False).first().admin_comment
-                if dialog.messages.filter(admin_comment__isnull=False).exists() else "",
-                'client_responses': client_responses,
-                'dialogs': [{
-                    'id': d.id,
-                    'last_message': d.messages.last().text if d.messages.last() else '',
-                    'unread_count': d.unread_count,
-                    'client_avatar': d.client_avatar
-                } for d in Dialog.objects.filter(user=user, is_closed=False)],
-                'no_more_questions': not available_questions.exists()
+                'current_step': dialog.current_step,
+                'max_steps': question.max_steps,
+                'dialogs': get_dialogs_data_for_user(user)
             })
-        except Exception as e:
-            logger.error(f"Ошибка сохранения: {str(e)}", exc_info=True)
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Недопустимый метод'}, status=400)
+
+        # Если это был последний шаг или не многошаговый диалог
+        dialog.is_completed = True
+        dialog.end_time = timezone.now()
+        dialog.save()
+
+        UserResponse.objects.create(user=user, question=question, answer=text)
+
+        completion_message = Message.objects.create(dialog=dialog, sender=None, text="Вы молодец! Диалог завершен.")
+        return create_new_dialog_response(user, dialog, message, completion_message)
+
+    except Exception as e:
+        logger.error(f"Ошибка сохранения: {str(e)}", exc_info=True)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def create_new_dialog_response(user, old_dialog, operator_message, completion_message):
+    answered_questions_ids = UserResponse.objects.filter(user=user).values_list('question_id', flat=True)
+    available_questions = Question.objects.exclude(id__in=answered_questions_ids)
+
+    new_dialog = None
+    if available_questions.exists():
+        new_question = random.choice(available_questions)
+        avatar_num = random.randint(1, 20)
+        new_dialog = Dialog.objects.create(
+            user=user,
+            question=new_question,
+            is_multi_step=(new_question.max_steps > 1),
+            client_avatar=f'https://i.pravatar.cc/150?img={avatar_num}'
+        )
+        Message.objects.create(dialog=new_dialog, sender=None, text=new_question.text)
+
+    return JsonResponse({
+        'status': 'ok',
+        'continue_dialog': False,
+        'message': operator_message.text,
+        'timestamp': operator_message.timestamp.strftime("%H:%M"),
+        'completion_message': completion_message.text,
+        'completion_timestamp': completion_message.timestamp.strftime("%H:%M"),
+        'new_dialog_id': new_dialog.id if new_dialog else None,
+        'no_more_questions': not available_questions.exists(),
+        'dialogs': get_dialogs_data_for_user(user)
+    })
+
+def get_dialogs_data_for_user(user):
+    return [{
+        'id': d.id,
+        'last_message': d.messages.last().text if d.messages.exists() else '',
+        'unread_count': d.unread_count,
+        'client_avatar': d.client_avatar
+    } for d in Dialog.objects.filter(user=user, is_closed=False)]
+
 
 @login_required
+@require_POST
 def get_dialog_data(request):
     if request.method == 'POST':
         try:
@@ -231,27 +231,23 @@ def get_dialog_data(request):
             if not dialog:
                 return JsonResponse({'status': 'error', 'message': 'Диалог не найден'}, status=404)
 
+            question = dialog.question
             messages = [{
                 'text': msg.text,
                 'sender': 'operator' if msg.sender else 'client',
                 'timestamp': msg.timestamp.strftime("%H:%M"),
                 'admin_comment': msg.admin_comment if msg.admin_comment else ''
             } for msg in dialog.messages.all()]
-            dialogs = [{
-                'id': d.id,
-                'last_message': d.messages.last().text if d.messages.last() else '',
-                'unread_count': d.unread_count,
-                'client_avatar': d.client_avatar
-            } for d in Dialog.objects.filter(user=request.user, is_closed=False)]
-            client_message = dialog.messages.filter(sender=None).first()
-            question = Question.objects.filter(text=client_message.text).first() if client_message else None
-            client_responses = question.get_client_responses_list() if question and question.client_responses else []
+            dialogs_data = get_dialogs_data_for_user(request.user)
+            
             return JsonResponse({
                 'status': 'ok',
                 'messages': messages,
-                'dialogs': dialogs,
+                'dialogs': dialogs_data,
+                'is_multi_step': dialog.is_multi_step,
+                'current_step': dialog.current_step,
+                'max_steps': question.max_steps if question else 1,
                 'admin_comment': dialog.messages.filter(admin_comment__isnull=False).first().admin_comment if dialog.messages.filter(admin_comment__isnull=False).exists() else "",
-                'client_responses': client_responses
             })
         except Exception as e:
             logger.error(f"Ошибка получения данных: {str(e)}")
