@@ -97,7 +97,12 @@
 
     <button class="toggle-button" id="toggle-button" style="display: none;">☰</button>
 
+    <script>
+        const userAvatar = "{{ user.avatar|default:'https://i.pravatar.cc/150?img=15' }}";
+        const dialogClientAvatar = "{{ current_dialog.client_avatar }}";
+    </script>
     <script src="{% static 'chat/js/script.js' %}"></script>
 </body>
 </html>
 <!-- Resave to trigger Git -->
+<!-- Another resave -->
