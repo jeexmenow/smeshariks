@@ -3,44 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тренажёр смешариков</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>Нет активных сценариев</title>
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f2f5;
             margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #0f172a;
+            color: #e5e7eb;
+            font-family: Inter, Arial, sans-serif;
             text-align: center;
         }
-        .message {
-            font-size: 20px;
-            color: #333;
-        }
-        .logout-button {
-            margin-top: 20px;
-            background-color: #00aaff;
-            color: #fff;
-            border: none;
+        .card {
+            max-width: 520px;
+            padding: 32px;
+            border: 1px solid #334155;
             border-radius: 20px;
-            padding: 10px 20px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            background: #111827;
         }
-        .logout-button:hover {
-            background-color: #0099e6;
+        p {
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        a {
+            display: inline-flex;
+            margin-top: 16px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
-    <div>
-        <div class="message">{{ message }}</div>
-
-        <br><a href="{% url 'logout' %}" class="logout-button">Выйти</a>
-    </div>
+    <main class="card">
+        <h1>{{ message }}</h1>
+        <p>Администратор может добавить сценарии вручную или выполнить команду <code>python manage.py seed_scenarios</code>.</p>
+        <a href="{% url 'logout' %}">Выйти</a>
+    </main>
 </body>
 </html>

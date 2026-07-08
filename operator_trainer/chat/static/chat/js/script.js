@@ -1,7 +1,7 @@
-// Resave to trigger Git
-// Глобальные переменные
-let userAvatar = window.userAvatar || 'https://github.com/identicons/default.png';
+const userAvatar = window.userAvatar || 'https://github.com/identicons/default.png';
 let dialogClientAvatar = window.dialogClientAvatar || 'https://api.dicebear.com/8.x/pixel-art/png?seed=client';
+let currentClientName = window.currentClientName || 'Клиент';
+
 const messagesContainer = document.getElementById('messages-container');
 const dialogsPanel = document.getElementById('dialogs-panel');
 const messageForm = document.getElementById('message-form');
@@ -10,356 +10,305 @@ const hintsContainer = document.getElementById('hints-container');
 const hintButton = document.getElementById('hint-button');
 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 const toggleButton = document.getElementById('toggle-button');
+const typingIndicator = document.getElementById('typing-indicator');
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', function() {
-    // Прокрутка вниз
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+document.addEventListener('DOMContentLoaded', () => {
+    scrollToBottom();
+    updateProgressIndicatorFromDom();
 
-    // Инициализация функций
-    updateChat(currentDialogId.value);
-    updateDialogs();
-
-    // Мобильная версия
-    if (window.innerWidth <= 480) {
+    if (window.innerWidth <= 720) {
         toggleButton.style.display = 'flex';
-        let isOpen = false;
         toggleButton.addEventListener('click', () => {
-            isOpen = !isOpen;
-            dialogsPanel.classList.toggle('open', isOpen);
-            toggleButton.textContent = isOpen ? '×' : '☰';
-        });
-    }
-
-    // Автоматическая прокрутка к полю ввода на мобильных устройствах
-    const messageInput = document.getElementById('message-input');
-    if (window.innerWidth <= 768) {
-        messageInput.addEventListener('focus', function() {
-            setTimeout(() => {
-                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
+            dialogsPanel.classList.toggle('open');
+            toggleButton.textContent = dialogsPanel.classList.contains('open') ? '×' : '☰';
         });
     }
 });
 
-// Добавляем индикатор прогресса для многошаговых диалогов
-function updateProgressIndicator(currentStep, maxSteps, isMultiStep) {
-    let progressHtml = '';
-    if (isMultiStep && maxSteps > 1) {
-        progressHtml = `
-            <div class="progress-indicator" style="
-                background: #f8f9fa; 
-                padding: 10px 20px; 
-                margin: 10px 20px; 
-                border-radius: 8px; 
-                text-align: center;
-                border: 1px solid #e9ecef;
-            ">
-                <div style="font-size: 12px; color: #6c757d; margin-bottom: 5px;">
-                    Шаг ${currentStep} из ${maxSteps}
-                </div>
-                <div style="
-                    background: #e9ecef; 
-                    height: 6px; 
-                    border-radius: 3px; 
-                    overflow: hidden;
-                ">
-                    <div style="
-                        background: var(--primary-color); 
-                        height: 100%; 
-                        width: ${(currentStep / maxSteps) * 100}%; 
-                        transition: width 0.3s ease;
-                    "></div>
-                </div>
-            </div>
-        `;
-    }
-    
-    // Удаляем старый индикатор прогресса
-    const oldProgress = document.querySelector('.progress-indicator');
-    if (oldProgress) {
-        oldProgress.remove();
-    }
-    
-    // Добавляем новый индикатор прогресса
-    if (progressHtml) {
-        const chatContainer = document.querySelector('.chat-container');
-        const messagesContainer = document.querySelector('.chat-messages');
-        chatContainer.insertBefore(document.createRange().createContextualFragment(progressHtml), messagesContainer);
-    }
-}
+messageForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
-// Отправка сообщения
-messageForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
     const messageInput = document.getElementById('message-input');
     const sendButton = messageForm.querySelector('button[type="submit"]');
     const message = messageInput.value.trim();
-
     if (!message || sendButton.disabled) {
         return;
     }
 
-    // Сохраняем иконку и активируем состояние загрузки
     const originalButtonContent = sendButton.innerHTML;
     sendButton.innerHTML = '<div class="spinner"></div>';
     sendButton.disabled = true;
 
     try {
-        const response = await fetch('/send/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken
-            },
-            body: `text=${encodeURIComponent(message)}&dialog_id=${currentDialogId.value}`
+        const response = await postForm('/send/', {
+            text: message,
+            dialog_id: currentDialogId.value,
+        });
+        const data = await response.json();
+        if (!response.ok || data.status !== 'ok') {
+            throw new Error(data.message || `Ошибка сети: ${response.statusText}`);
+        }
+
+        messageInput.value = '';
+        appendMessage({
+            sender: 'operator',
+            text: data.message,
+            timestamp: data.timestamp,
+            score: data.score,
+            feedback: data.feedback,
         });
 
-        if (!response.ok) {
-            throw new Error(`Ошибка сети: ${response.statusText}`);
+        if (data.new_message) {
+            showTypingIndicator();
+            await delay(Math.min(1200, Math.max(350, data.new_message.length * 20)));
+            hideTypingIndicator();
+            appendMessage({
+                sender: 'client',
+                text: data.new_message,
+                timestamp: data.new_timestamp,
+            });
         }
 
-        const data = await response.json();
+        if (data.completion_message) {
+            appendMessage({
+                sender: 'system',
+                text: data.completion_message,
+                timestamp: data.completion_timestamp,
+            });
+        }
 
-        if (data.status === 'ok') {
-            messageInput.value = '';
+        updateProgressIndicator(data.current_step, data.max_steps, data.continue_dialog);
+        updateDialogs(data.dialogs);
 
-            // Добавляем сообщение оператора
-            const operatorDiv = document.createElement('div');
-            operatorDiv.className = 'message operator new-message'; // Добавляем класс для анимации
-            operatorDiv.innerHTML = `
-                <div class="message-header">
-                    <img src="${userAvatar}" alt="Аватар" class="message-avatar">
-                    <span class="message-sender">Вы</span>
-                    <span class="message-time">${data.timestamp}</span>
-                </div>
-                ${escapeHTML(data.message)}
-            `;
-            messagesContainer.appendChild(operatorDiv);
-
-            // Обработка ответа
-            if (data.continue_dialog) {
-                // Если диалог продолжается
-                const clientDiv = document.createElement('div');
-                clientDiv.className = 'message client new-message';
-                clientDiv.innerHTML = `
-                    <div class="message-header">
-                        <img src="${dialogClientAvatar}" alt="Аватар" class="message-avatar">
-                        <span class="message-sender">Клиент</span>
-                        <span class="message-time">${data.new_timestamp}</span>
-                    </div>
-                    ${escapeHTML(data.new_message)}
-                `;
-                messagesContainer.appendChild(clientDiv);
-                updateProgressIndicator(data.current_step, data.max_steps, true);
-            } else if (data.completion_message) {
-                // Если диалог завершен
-                const completionDiv = document.createElement('div');
-                completionDiv.className = 'message completion new-message';
-                completionDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-sender">Система</span>
-                        <span class="message-time">${data.completion_timestamp}</span>
-                    </div>
-                    ${escapeHTML(data.completion_message)}
-                `;
-                messagesContainer.appendChild(completionDiv);
-            }
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            updateDialogs(data.dialogs);
-
-            if (data.new_dialog_id) {
-                // Переключаемся на новый диалог
-                setTimeout(() => {
-                    updateChat(data.new_dialog_id);
-                    currentDialogId.value = data.new_dialog_id; // Обновляем ID после загрузки
-                }, 200);
-            } else if (data.no_more_questions) {
-                // Если вопросов больше нет
-                const endDiv = document.createElement('div');
-                endDiv.className = 'message completion new-message';
-                endDiv.innerHTML = `Все вопросы завершены! Поздравляем!`;
-                messagesContainer.appendChild(endDiv);
-            }
-        } else {
-            throw new Error(data.message || 'Произошла неизвестная ошибка');
+        if (data.new_dialog_id) {
+            setTimeout(() => switchDialog(data.new_dialog_id), 500);
+        } else if (data.no_more_questions) {
+            appendMessage({
+                sender: 'system',
+                text: 'Все доступные сценарии завершены. Отличная работа!',
+                timestamp: data.completion_timestamp || '',
+            });
         }
     } catch (error) {
-        console.error("Ошибка при отправке сообщения:", error);
-        // Здесь можно добавить уведомление для пользователя
         alert(`Не удалось отправить сообщение: ${error.message}`);
     } finally {
-        // Возвращаем кнопку в исходное состояние
+        hideTypingIndicator();
         sendButton.innerHTML = originalButtonContent;
         sendButton.disabled = false;
     }
 });
 
-function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
-}
-
-// Обновление списка диалогов с переданными данными
-function updateDialogs(dialogsData) {
-    if (dialogsData) {
-        dialogsPanel.innerHTML = '';
-        dialogsData.forEach(d => {
-            const div = document.createElement('div');
-            div.className = `dialog-item ${d.id == currentDialogId.value ? 'active' : ''} ${d.unread_count > 0 ? 'unread' : ''}`;
-            div.setAttribute('data-dialog-id', d.id);
-            div.innerHTML = `
-                <img src="${d.client_avatar}" alt="Аватар клиента">
-                <div class="dialog-info">
-                    <div class="client-name">Клиент #${d.id}</div>
-                    <div class="last-message">${d.last_message}</div>
-                </div>
-                ${d.unread_count > 0 ? `<span class="unread-count">${d.unread_count}</span>` : ''}
-                <button class="close-button" data-dialog-id="${d.id}">&times;</button>
-            `;
-            dialogsPanel.appendChild(div);
-        });
-    } else {
-        // Обновление списка диалогов без данных
-        fetch('/get_dialog_data/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken
-            },
-            body: `dialog_id=${currentDialogId.value}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ok') {
-                dialogsPanel.innerHTML = '';
-                data.dialogs.forEach(d => {
-                    const div = document.createElement('div');
-                    div.className = `dialog-item ${d.id == currentDialogId.value ? 'active' : ''} ${d.unread_count > 0 ? 'unread' : ''}`;
-                    div.setAttribute('data-dialog-id', d.id);
-                    div.innerHTML = `
-                        <img src="${d.client_avatar}" alt="Аватар клиента">
-                        <div class="dialog-info">
-                            <div class="client-name">Клиент #${d.id}</div>
-                            <div class="last-message">${d.last_message}</div>
-                        </div>
-                        ${d.unread_count > 0 ? `<span class="unread-count">${d.unread_count}</span>` : ''}
-                        <button class="close-button" data-dialog-id="${d.id}">&times;</button>
-                    `;
-                    dialogsPanel.appendChild(div);
-                });
-            }
-        });
-    }
-}
-
-// Переключение диалогов
-dialogsPanel.addEventListener('click', (e) => {
-    const dialogItem = e.target.closest('.dialog-item');
-    if (dialogItem && !e.target.classList.contains('close-button')) {
-        const dialogId = dialogItem.getAttribute('data-dialog-id');
-        currentDialogId.value = dialogId;
-        updateChat(dialogId);
-        updateDialogs();
-        // Сбрасываем непрочитанные для выбранного диалога
-        fetch('/mark_read/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken
-            },
-            body: `dialog_id=${dialogId}`
-        }).then(() => updateDialogs());
-    }
-});
-
-// Закрытие диалога
-dialogsPanel.addEventListener('click', (e) => {
-    const closeButton = e.target.closest('.close-button');
+dialogsPanel.addEventListener('click', async (event) => {
+    const closeButton = event.target.closest('.close-button');
     if (closeButton) {
-        const dialogId = closeButton.getAttribute('data-dialog-id');
-        fetch('/close_dialog/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken
-            },
-            body: `dialog_id=${dialogId}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ok') {
-                updateDialogs();
-                if (currentDialogId.value == dialogId) {
-                    const firstDialog = Dialog.objects.filter(user=request.user, is_completed=False, is_closed=False).first();
-                    if (firstDialog) {
-                        currentDialogId.value = firstDialog.id;
-                        updateChat(firstDialog.id);
-                    } else {
-                        messagesContainer.innerHTML = '<div class="message">Нет активных диалогов</div>';
-                        hintsContainer.classList.remove('active');
-                    }
-                }
-            }
-        });
+        event.stopPropagation();
+        await closeDialog(closeButton.dataset.dialogId);
+        return;
     }
+
+    const dialogItem = event.target.closest('.dialog-item');
+    if (!dialogItem || !dialogItem.dataset.dialogId) {
+        return;
+    }
+    await switchDialog(dialogItem.dataset.dialogId);
 });
 
-// Обновление чата
-function updateChat(dialogId) {
-    fetch('/get_dialog_data/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': csrfToken
-        },
-        body: `dialog_id=${dialogId}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'ok') {
-            messagesContainer.innerHTML = '';
-            data.messages.forEach(msg => {
-                const div = document.createElement('div');
-                div.className = `message ${msg.sender}`;
-                div.innerHTML = `
-                    <div class="message-header">
-                        <img src="${msg.sender === 'operator' ? userAvatar : dialogClientAvatar}" alt="Аватар" class="message-avatar">
-                        <span class="message-sender">${msg.sender === 'operator' ? 'Вы' : 'Клиент'}</span>
-                        <span class="message-time">${msg.timestamp}</span>
-                        ${msg.step_number > 1 ? `<span class="step-indicator" style="font-size: 10px; color: #999;">Шаг ${msg.step_number}</span>` : ''}
-                    </div>
-                    ${msg.text}
-                    ${msg.admin_comment ? `<div class="admin-comment" style="font-size: 12px; color: #666; margin-top: 5px;">Комментарий администратора: ${msg.admin_comment}</div>` : ''}
-                `;
-                messagesContainer.appendChild(div);
-            });
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            hintsContainer.classList.remove('active'); // Скрываем подсказки при переключении
-            
-            // Обновляем индикатор прогресса
-            if (data.is_multi_step) {
-                updateProgressIndicator(data.current_step, data.max_steps, true);
-            } else {
-                // Удаляем индикатор прогресса для обычных диалогов
-                const oldProgress = document.querySelector('.progress-indicator');
-                if (oldProgress) {
-                    oldProgress.remove();
-                }
-            }
+hintButton.addEventListener('click', () => {
+    hintsContainer.classList.toggle('active');
+    hintButton.textContent = hintsContainer.classList.contains('active') ? 'Скрыть' : 'Показать';
+});
+
+async function switchDialog(dialogId) {
+    const response = await postForm('/get_dialog_data/', { dialog_id: dialogId });
+    const data = await response.json();
+    if (!response.ok || data.status !== 'ok') {
+        return;
+    }
+
+    currentDialogId.value = dialogId;
+    dialogClientAvatar = data.client_avatar || dialogClientAvatar;
+    renderMessages(data.messages);
+    updateDialogs(data.dialogs);
+    updateProgressIndicator(data.current_step, data.max_steps, data.is_multi_step);
+    updateTrainingPanel(data.training_panel);
+    await postForm('/mark_read/', { dialog_id: dialogId });
+}
+
+async function closeDialog(dialogId) {
+    const response = await postForm('/close_dialog/', { dialog_id: dialogId });
+    const data = await response.json();
+    if (!response.ok || data.status !== 'ok') {
+        return;
+    }
+
+    updateDialogs(data.dialogs || []);
+    if (currentDialogId.value === dialogId) {
+        const nextDialog = (data.dialogs || [])[0];
+        if (nextDialog) {
+            await switchDialog(nextDialog.id);
+        } else {
+            currentDialogId.value = '';
+            messagesContainer.innerHTML = '<div class="empty-state">Нет активных диалогов</div>';
         }
+    }
+}
+
+function renderMessages(messages) {
+    messagesContainer.innerHTML = '';
+    messages.forEach(appendMessage);
+    scrollToBottom();
+}
+
+function appendMessage(message) {
+    const div = document.createElement('div');
+    div.className = `message ${message.sender === 'operator' ? 'operator' : message.sender === 'system' ? 'system' : 'client'} new-message`;
+    div.innerHTML = `
+        <div class="message-header">
+            ${message.sender === 'system' ? '' : `<img src="${message.sender === 'operator' ? userAvatar : dialogClientAvatar}" alt="Аватар" class="message-avatar">`}
+            <span class="message-sender">${senderLabel(message.sender)}</span>
+            <span class="message-time">${escapeHTML(message.timestamp || '')}</span>
+            ${message.score ? `<span class="score-pill">${message.score}%</span>` : ''}
+        </div>
+        <div class="message-text">${escapeHTML(message.text || '')}</div>
+        ${message.feedback ? `<div class="message-feedback">${escapeHTML(message.feedback)}</div>` : ''}
+        ${message.admin_comment ? `<div class="admin-comment">Комментарий администратора: ${escapeHTML(message.admin_comment)}</div>` : ''}
+    `;
+    messagesContainer.appendChild(div);
+    scrollToBottom();
+}
+
+function updateDialogs(dialogsData) {
+    dialogsPanel.innerHTML = `
+        <div class="panel-heading">
+            <span>Диалоги</span>
+            <span class="counter">${dialogsData.length}</span>
+        </div>
+    `;
+
+    if (!dialogsData.length) {
+        dialogsPanel.insertAdjacentHTML('beforeend', '<div class="empty-state">Нет активных диалогов</div>');
+        return;
+    }
+
+    dialogsData.forEach((dialog) => {
+        const div = document.createElement('div');
+        div.className = `dialog-item ${String(dialog.id) === String(currentDialogId.value) ? 'active' : ''} ${dialog.unread_count > 0 ? 'unread' : ''}`;
+        div.dataset.dialogId = dialog.id;
+        div.innerHTML = `
+            <img src="${escapeAttribute(dialog.client_avatar)}" alt="Аватар клиента">
+            <div class="dialog-info">
+                <div class="client-name">${escapeHTML(dialog.client_name || 'Клиент')}</div>
+                <div class="scenario-name">${escapeHTML(dialog.title || `Диалог #${dialog.id}`)}</div>
+                <div class="last-message">${escapeHTML(dialog.last_message || '')}</div>
+            </div>
+            <button class="close-button" data-dialog-id="${dialog.id}" title="Закрыть диалог">&times;</button>
+        `;
+        dialogsPanel.appendChild(div);
     });
 }
 
-// Показ/скрытие подсказок при клике на кнопку
-hintButton.addEventListener('click', () => {
-    hintsContainer.classList.toggle('active');
-}); 
+function updateTrainingPanel(panel) {
+    if (!panel) {
+        return;
+    }
+
+    currentClientName = panel.client_name || 'Клиент';
+    setText('current-client-name', currentClientName);
+    setText('current-client-status', panel.client_status || 'online');
+    setText('scenario-title', panel.title || 'Тренировочный кейс');
+    setText('scenario-difficulty', panel.difficulty || 'medium');
+    setText('panel-title', panel.title || 'Тренировочный кейс');
+    setText('panel-situation', panel.situation || 'Описание ситуации будет здесь.');
+    setText('panel-goal', panel.goal || 'Помогите клиенту и корректно завершите диалог.');
+
+    hintsContainer.innerHTML = '';
+    const hints = panel.hints || [];
+    if (!hints.length) {
+        hintsContainer.innerHTML = '<div class="hint muted">Подсказок для этого шага нет.</div>';
+    } else {
+        hints.forEach((hint) => {
+            const div = document.createElement('div');
+            div.className = 'hint';
+            div.textContent = hint;
+            hintsContainer.appendChild(div);
+        });
+    }
+    hintsContainer.classList.remove('active');
+    hintButton.textContent = 'Показать';
+}
+
+function updateProgressIndicator(currentStep, maxSteps, isActive) {
+    const progress = document.getElementById('progress-indicator');
+    const label = document.getElementById('progress-label');
+    const fill = document.getElementById('progress-fill');
+    const total = Math.max(Number(maxSteps) || 1, 1);
+    const current = Math.min(Math.max(Number(currentStep) || 1, 1), total);
+    progress.classList.toggle('completed', !isActive);
+    label.textContent = isActive ? `Шаг ${current} из ${total}` : 'Сценарий завершен';
+    fill.style.width = `${Math.round((current / total) * 100)}%`;
+}
+
+function updateProgressIndicatorFromDom() {
+    const label = document.getElementById('progress-label');
+    if (!label) {
+        return;
+    }
+}
+
+function postForm(url, payload) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
+        },
+        body: new URLSearchParams(payload).toString(),
+    });
+}
+
+function senderLabel(sender) {
+    if (sender === 'operator') {
+        return 'Вы';
+    }
+    if (sender === 'system') {
+        return 'Система';
+    }
+    return currentClientName || 'Клиент';
+}
+
+function showTypingIndicator() {
+    typingIndicator.classList.add('active');
+}
+
+function hideTypingIndicator() {
+    typingIndicator.classList.remove('active');
+}
+
+function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function setText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>'"]/g, (tag) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;',
+    }[tag]));
+}
+
+function escapeAttribute(value) {
+    return escapeHTML(value).replace(/`/g, '&#96;');
+}
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}

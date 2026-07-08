@@ -1,97 +1,56 @@
 import re
-from typing import List, Optional, Tuple
-from .models import DialogStep, Question
+from typing import Iterable
+
+from .models import Dialog, Message, ScenarioStep
 
 
-def analyze_operator_message(message: str, dialog_steps: List[DialogStep]) -> Optional[DialogStep]:
-    # анализирует сообщение оператора и возвращает следующий шаг диалога
+STOP_WORDS = {
+    'и', 'в', 'во', 'не', 'что', 'он', 'на', 'я', 'с', 'со', 'как', 'а', 'то',
+    'все', 'она', 'так', 'его', 'но', 'да', 'ты', 'к', 'у', 'же', 'вы', 'за',
+    'бы', 'по', 'только', 'мне', 'было', 'вот', 'от', 'меня', 'еще', 'нет',
+    'о', 'из', 'если', 'или', 'для', 'мы', 'их', 'чем', 'без', 'кто', 'это',
+}
+
+
+def extract_keywords_from_message(message: str) -> list[str]:
+    clean_message = re.sub(r'[^\w\s]', '', message.lower())
+    words = clean_message.split()
+    return [word for word in words if word not in STOP_WORDS and len(word) > 2]
+
+
+def analyze_operator_message(message: str, steps: Iterable[ScenarioStep]) -> ScenarioStep | None:
     message_lower = message.lower()
-    
-    for step in dialog_steps:
-        keywords = step.get_trigger_keywords_list()
-        for keyword in keywords:
-            if keyword in message_lower:
-                return step
-    
+    for step in steps:
+        if any(keyword in message_lower for keyword in step.get_keywords_list()):
+            return step
     return None
 
 
-def generate_client_response(operator_message: str, current_step: DialogStep, question: Question) -> str:
-
-    # генерирует ответ клиента на основе сообщения оператора и текущего шага
-    if current_step.client_follow_up:
-        return current_step.client_follow_up
-    
-    # проверяем, содержит ли сообщение оператора ожидаемые ключевые слова
-    if current_step.expected_operator_response:
-        expected_lower = current_step.expected_operator_response.lower()
-        message_lower = operator_message.lower()
-        
-        # если оператор дал ожидаемый ответ, переходим к следующему шагу
-        if any(keyword in message_lower for keyword in expected_lower.split()):
-            return current_step.client_message
-    
-    # если нет специального follow-up, возвращаем стандартное сообщение шага
+def generate_client_response(current_step: ScenarioStep | None) -> str:
+    if not current_step:
+        return "Спасибо, я понял. Буду ждать решения."
     return current_step.client_message
 
 
-def should_continue_dialog(dialog, question: Question) -> bool:
-
-    # определяет, должен ли диалог продолжаться
-
-    if not question.is_multi_step:
+def should_continue_dialog(dialog: Dialog) -> bool:
+    if dialog.is_completed or dialog.is_closed or not dialog.scenario:
         return False
-    
-    if dialog.current_step >= dialog.max_steps:
-        return False
-    
-    # проверяем, есть ли еще шаги для этого вопроса
-    next_step = DialogStep.objects.filter(
-        question=question,
-        step_number=dialog.current_step + 1
-    ).first()
-    
-    return next_step is not None
+    return dialog.scenario.steps.filter(step_number=dialog.current_step).exists()
 
 
-def get_dialog_context(dialog) -> dict:
-    messages = dialog.messages.all()
-    operator_messages = [msg.text for msg in messages if msg.sender]
-    client_messages = [msg.text for msg in messages if not msg.sender]
-    
+def get_dialog_context(dialog: Dialog) -> dict:
+    messages = list(dialog.messages.all())
     return {
-        'operator_messages': operator_messages,
-        'client_messages': client_messages,
+        'operator_messages': [msg.text for msg in messages if msg.role == Message.ROLE_OPERATOR or msg.sender_id],
+        'client_messages': [msg.text for msg in messages if msg.role in {Message.ROLE_CLIENT, Message.ROLE_AI}],
+        'system_messages': [msg.text for msg in messages if msg.role == Message.ROLE_SYSTEM],
         'current_step': dialog.current_step,
-        'total_messages': len(messages)
+        'total_messages': len(messages),
+        'scenario': dialog.scenario.title if dialog.scenario else None,
     }
 
 
-def extract_keywords_from_message(message: str) -> List[str]:
-    # убираем знаки препинания и приводим к нижнему регистру
-    clean_message = re.sub(r'[^\w\s]', '', message.lower())
-    words = clean_message.split()
-    
-    # фильтруем стоп-слова (можно расширить список)
-    stop_words = {'и', 'в', 'во', 'не', 'что', 'он', 'на', 'я', 'с', 'со', 'как', 'а', 'то', 'все', 'она', 'так', 'его', 'но', 'да', 'ты', 'к', 'у', 'же', 'вы', 'за', 'бы', 'по', 'только', 'ее', 'мне', 'было', 'вот', 'от', 'меня', 'еще', 'нет', 'о', 'из', 'ему', 'теперь', 'когда', 'даже', 'ну', 'вдруг', 'ли', 'если', 'уже', 'или', 'ни', 'быть', 'был', 'него', 'до', 'вас', 'нибудь', 'опять', 'уж', 'вам', 'ведь', 'там', 'потом', 'себя', 'ничего', 'ей', 'может', 'они', 'тут', 'где', 'есть', 'надо', 'ней', 'для', 'мы', 'тебя', 'их', 'чем', 'была', 'сам', 'чтоб', 'без', 'будто', 'чего', 'раз', 'тоже', 'себе', 'под', 'будет', 'ж', 'тогда', 'кто', 'этот', 'того', 'потому', 'этого', 'какой', 'совсем', 'ним', 'здесь', 'этом', 'один', 'почти', 'мой', 'тем', 'чтобы', 'нее', 'сейчас', 'были', 'куда', 'зачем', 'всех', 'никогда', 'можно', 'при', 'наконец', 'два', 'об', 'другой', 'хоть', 'после', 'над', 'больше', 'тот', 'через', 'эти', 'нас', 'про', 'всего', 'них', 'какая', 'много', 'разве', 'три', 'эту', 'моя', 'впрочем', 'хорошо', 'свою', 'этой', 'перед', 'иногда', 'лучше', 'чуть', 'том', 'нельзя', 'такой', 'им', 'более', 'всегда', 'притом', 'будет', 'очень', 'мой', 'до', 'вас', 'нибудь', 'опять', 'уж', 'вам', 'ведь', 'там', 'потом', 'себя', 'ничего', 'ей', 'может', 'они', 'тут', 'где', 'есть', 'надо', 'ней', 'для', 'мы', 'тебя', 'их', 'чем', 'была', 'сам', 'чтоб', 'без', 'будет', 'ж', 'тогда', 'кто', 'этот', 'того', 'потому', 'этого', 'какой', 'совсем', 'ним', 'здесь', 'этом', 'один', 'почти', 'мой', 'тем', 'чтобы', 'нее', 'сейчас', 'были', 'куда', 'зачем', 'всех', 'никогда', 'можно', 'при', 'наконец', 'два', 'об', 'другой', 'хоть', 'после', 'над', 'больше', 'тот', 'через', 'эти', 'нас', 'про', 'всего', 'них', 'какая', 'много', 'разве', 'три', 'эту', 'моя', 'впрочем', 'хорошо', 'свою', 'этой', 'перед', 'иногда', 'лучше', 'чуть', 'том', 'нельзя', 'такой', 'им', 'более', 'всегда', 'притом', 'будет', 'очень'}
-    
-    keywords = [word for word in words if word not in stop_words and len(word) > 2]
-    return keywords
-
-
-def find_matching_step(operator_message: str, question: Question, current_step: int) -> Optional[DialogStep]:
-    # получаем все шаги для этого вопроса
-    dialog_steps = DialogStep.objects.filter(question=question).order_by('step_number')
-    
-    # ищем шаг, который соответствует текущему номеру шага
-    for step in dialog_steps:
-        if step.step_number == current_step:
-            # проверяем, подходит ли сообщение оператора для этого шага
-            keywords = step.get_trigger_keywords_list()
-            message_lower = operator_message.lower()
-            
-            for keyword in keywords:
-                if keyword in message_lower:
-                    return step
-    
-    return None 
+def find_matching_step(operator_message: str, dialog: Dialog) -> ScenarioStep | None:
+    if not dialog.scenario:
+        return None
+    return analyze_operator_message(operator_message, dialog.scenario.steps.order_by('step_number'))
