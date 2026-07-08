@@ -37,19 +37,12 @@ def evaluate_operator_message(message: Message, step: ScenarioStep | None) -> Ev
     else:
         score = 80 if len(text) >= 20 else 50
 
-    if missed:
-        feedback = "Стоит добавить: " + ", ".join(missed)
-    elif matched:
-        feedback = "Ответ покрывает ключевые критерии шага."
-    else:
-        feedback = "Ответ принят. Администратор сможет уточнить оценку вручную."
-
     return EvaluationResult(
         score=score,
         max_score=100,
         matched_keywords=matched,
         missed_keywords=missed,
-        feedback=feedback,
+        feedback="",
     )
 
 

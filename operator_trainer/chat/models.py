@@ -194,18 +194,26 @@ class Dialog(models.Model):
             return self.question.max_steps
         return 1
 
+    @property
+    def needs_operator_response(self):
+        has_client_message = self.messages.filter(role__in=[Message.ROLE_CLIENT, Message.ROLE_AI]).exists()
+        has_operator_message = self.messages.filter(role=Message.ROLE_OPERATOR).exists()
+        return has_client_message and not has_operator_message
+
 
 class Message(models.Model):
     ROLE_CLIENT = 'client'
     ROLE_OPERATOR = 'operator'
     ROLE_SYSTEM = 'system'
     ROLE_AI = 'ai'
+    ROLE_ADMIN = 'admin'
 
     ROLE_CHOICES = [
         (ROLE_CLIENT, 'Клиент'),
         (ROLE_OPERATOR, 'Оператор'),
         (ROLE_SYSTEM, 'Система'),
         (ROLE_AI, 'AI-клиент'),
+        (ROLE_ADMIN, 'Администратор'),
     ]
 
     dialog = models.ForeignKey(Dialog, on_delete=models.CASCADE, related_name='messages')
@@ -229,6 +237,25 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Сообщение в диалоге {self.dialog.id} от {self.sender or self.get_role_display()}"
+
+
+class ResponseTemplate(models.Model):
+    title = models.CharField("Название", max_length=255)
+    category = models.CharField("Категория", max_length=120, blank=True)
+    keywords = models.TextField("Ключевые слова", blank=True)
+    text = models.TextField("Текст шаблона")
+    html = models.TextField("HTML шаблон", blank=True)
+    source = models.CharField("Источник", max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Шаблон ответа"
+        verbose_name_plural = "Шаблоны ответов"
+        ordering = ['category', 'title']
+
+    def __str__(self):
+        return self.title
 
 
 class Evaluation(models.Model):

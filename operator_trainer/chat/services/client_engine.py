@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from django.utils import timezone
 
 from chat.models import Dialog, Message, Scenario, ScenarioStep
+from chat.services.avatars import get_client_avatar_for_scenario
 from chat.services.evaluator import persist_evaluation
 
 
@@ -22,7 +23,7 @@ def get_current_step(dialog: Dialog) -> ScenarioStep | None:
 
 
 def start_dialog_for_scenario(user, scenario: Scenario) -> Dialog:
-    avatar = scenario.client_avatar or f"https://api.dicebear.com/8.x/pixel-art/png?seed=scenario-{scenario.id}"
+    avatar = scenario.client_avatar or get_client_avatar_for_scenario(scenario.id)
     dialog = Dialog.objects.create(
         user=user,
         scenario=scenario,
@@ -43,12 +44,16 @@ def start_dialog_for_scenario(user, scenario: Scenario) -> Dialog:
 
 
 def get_next_available_scenario(user) -> Scenario | None:
-    completed_scenario_ids = Dialog.objects.filter(
+    unavailable_scenario_ids = set(Dialog.objects.filter(
         user=user,
         scenario__isnull=False,
-        is_completed=True,
-    ).values_list('scenario_id', flat=True)
-    return Scenario.objects.filter(is_active=True).exclude(id__in=completed_scenario_ids).order_by('?').first()
+    ).filter(is_completed=True).values_list('scenario_id', flat=True))
+    unavailable_scenario_ids.update(Dialog.objects.filter(
+        user=user,
+        scenario__isnull=False,
+        is_closed=True,
+    ).values_list('scenario_id', flat=True))
+    return Scenario.objects.filter(is_active=True).exclude(id__in=unavailable_scenario_ids).order_by('?').first()
 
 
 def get_or_create_active_dialog(user) -> Dialog | None:

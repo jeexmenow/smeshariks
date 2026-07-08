@@ -47,6 +47,11 @@ python manage.py runserver
 set DJANGO_SECRET_KEY=change-me
 set DJANGO_DEBUG=True
 set DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+set AI_CLIENT_ENABLED=True
+set AI_CLIENT_API_KEY=your-token
+set AI_CLIENT_BASE_URL=https://api.openai.com/v1
+set AI_CLIENT_MODEL=gpt-4o-mini
+set KNOWLEDGE_BASE_URL=https://df11ef6.platrum.ru/wiki/space/dlya-operatorov
 ```
 
 ## Основная структура
@@ -82,7 +87,13 @@ operator_trainer/
 
 ## Будущая AI-интеграция
 
-Подключение LLM лучше делать не во `views.py`, а через новый адаптер рядом с `chat/services/client_engine.py`. Контракт уже выделен: сервис получает диалог, историю и сценарий, возвращает клиентскую реплику и состояние продолжения/завершения. Это позволит заменить локальный сценарный ответ на AI-клиента без переписывания UI и endpoint-ов.
+Подключение LLM лучше делать не во `views.py`, а через сервисный слой. Уже подготовлены:
+
+- `chat/services/ai_client.py` — OpenAI-compatible клиент, читает токен из `AI_CLIENT_API_KEY`.
+- `chat/services/knowledge_base.py` — загрузчик контекста базы знаний.
+- `chat/services/prompts.py` — промпты для роли клиента и оценки ответа оператора.
+
+Токен не хранится в репозитории. Его нужно передавать через переменные окружения.
 
 ## Проверки
 

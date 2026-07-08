@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль оператора</title>
+    <link rel="icon" type="image/png" href="{% static 'chat/img/favicon.png' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}?v=2.7">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <img src="{% static 'chat/img/logo-light.png' %}" alt="PROXYS.IO" class="brand-logo">
+            <div>
+                <h1>Профиль</h1>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <a href="{% url 'chat_trainer' %}" class="primary-button header-knowledge-button">К тренажеру</a>
+            <a href="{% url 'templates_library' %}" class="secondary-button">Шаблоны</a>
+            <a href="https://proxys.world/ru" class="secondary-button site-button" target="_blank">Наш сайт</a>
+            <span class="operator-chip">Оператор: {{ user.username }}</span>
+            <a href="{% url 'logout' %}" class="secondary-button logout-button">Выход</a>
+        </div>
+    </header>
+
+    <main class="dashboard-page">
+        <section class="dashboard-hero">
+            <div class="profile-summary">
+                <div>
+                    <p class="eyebrow">Progress dashboard</p>
+                    <h2>{{ user.username }}</h2>
+                    <p>Следите за завершенными кейсами, средней оценкой и достижениями.</p>
+                </div>
+            </div>
+            <div class="dashboard-score">
+                <img src="{{ user.avatar }}" alt="Аватар оператора" class="profile-avatar">
+                <form action="{% url 'update_avatar' %}" method="post" enctype="multipart/form-data" class="avatar-upload-form">
+                    {% csrf_token %}
+                    <label class="avatar-upload-button">
+                        Загрузить аватар
+                        <input type="file" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp" onchange="this.form.submit()">
+                    </label>
+                </form>
+            </div>
+        </section>
+
+        <section class="stats-grid">
+            <article class="stat-card">
+                <span>{{ average_score }}%</span>
+                <p>Средняя оценка</p>
+            </article>
+            <article class="stat-card">
+                <span>{{ active_count }}</span>
+                <p>Активных диалогов</p>
+            </article>
+            <article class="stat-card">
+                <span>{{ completed_count }}</span>
+                <p>Завершенных кейсов</p>
+            </article>
+            <article class="stat-card">
+                <span>{{ total_messages }}</span>
+                <p>Ответов клиентам</p>
+            </article>
+            <article class="stat-card">
+                <span>{{ best_score }}%</span>
+                <p>Лучший ответ</p>
+            </article>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="dashboard-card">
+                <div class="card-heading">
+                    <p class="eyebrow">Достижения</p>
+                    <span class="counter">{{ unlocked_count }}/{{ achievements|length }}</span>
+                </div>
+                <div class="achievements-list">
+                    {% for achievement in achievements %}
+                        <div class="achievement {% if achievement.is_unlocked %}unlocked{% endif %}">
+                            <div class="achievement-icon">{% if achievement.is_unlocked %}✓{% else %}•{% endif %}</div>
+                            <div>
+                                <h3>{{ achievement.title }}</h3>
+                                <p>{{ achievement.description }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="card-heading">
+                    <p class="eyebrow">Последние диалоги</p>
+                </div>
+                <div class="recent-dialogs">
+                    {% for dialog in recent_dialogs %}
+                        <div class="recent-dialog">
+                            <div>
+                                <h3>{{ dialog.get_training_title }}</h3>
+                                <p>{{ dialog.client_name }} · {{ dialog.messages_count }} сообщений</p>
+                            </div>
+                            <span>{{ dialog.score }}%</span>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">Диалогов пока нет. Начните тренировку.</div>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

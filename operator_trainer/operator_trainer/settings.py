@@ -21,6 +21,19 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+AI_CLIENT = {
+    'ENABLED': os.environ.get('AI_CLIENT_ENABLED', 'False').lower() in {'1', 'true', 'yes', 'on'},
+    'API_KEY': os.environ.get('AI_CLIENT_API_KEY', ''),
+    'BASE_URL': os.environ.get('AI_CLIENT_BASE_URL', 'https://api.openai.com/v1'),
+    'MODEL': os.environ.get('AI_CLIENT_MODEL', 'gpt-4o-mini'),
+    'TIMEOUT': int(os.environ.get('AI_CLIENT_TIMEOUT', '30')),
+}
+
+KNOWLEDGE_BASE_URL = os.environ.get(
+    'KNOWLEDGE_BASE_URL',
+    'https://df11ef6.platrum.ru/wiki/space/dlya-operatorov',
+)
+
 
 # Application definition
 
@@ -114,6 +127,9 @@ STATICFILES_DIRS = [
 ]
 if not STATICFILES_DIRS[0].exists():
     STATICFILES_DIRS = []
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

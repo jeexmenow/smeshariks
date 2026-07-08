@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мониторинг операторов</title>
+    <link rel="icon" type="image/png" href="{% static 'chat/img/favicon.png' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}?v=3.3">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <img src="{% static 'chat/img/logo-light.png' %}" alt="PROXYS.IO" class="brand-logo">
+            <div>
+                <h1>Мониторинг операторов</h1>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <a href="/admin/" class="primary-button header-knowledge-button">Админ-панель</a>
+            <a href="{% url 'logout' %}" class="secondary-button logout-button">Выход</a>
+        </div>
+    </header>
+
+    <main class="admin-monitor">
+        <aside class="admin-operators">
+            {% for operator in operators %}
+                <section class="operator-group">
+                    <h2>{{ operator.username }}</h2>
+                    {% for dialog in operator.dialogs.all %}
+                        <button class="admin-dialog-item status-{{ dialog.status }} {% if dialog.needs_operator_response %}needs-response{% endif %} {% if first_dialog and dialog.id == first_dialog.id %}active{% endif %}" data-dialog-id="{{ dialog.id }}">
+                            <span>{{ dialog.get_training_title }}</span>
+                            <small>{{ dialog.client_name }} · {{ dialog.get_status_display }}</small>
+                        </button>
+                    {% empty %}
+                        <div class="empty-state">Диалогов нет</div>
+                    {% endfor %}
+                </section>
+            {% empty %}
+                <div class="empty-state">Операторов пока нет</div>
+            {% endfor %}
+        </aside>
+
+        <section class="admin-chat-panel">
+            <div class="chat-header">
+                <div>
+                    <p class="eyebrow" id="admin-operator-label">Диалог оператора{% if first_dialog %} {{ first_dialog.user.username }}{% endif %}</p>
+                    <h2 id="admin-dialog-title">{% if first_dialog %}{{ first_dialog.get_training_title }}{% else %}Нет диалога{% endif %}</h2>
+                    <p class="admin-dialog-score" id="admin-dialog-score">{% if first_dialog and first_dialog.score %}Оценка: {{ first_dialog.score }}%{% else %}Оценка еще не выставлена{% endif %}</p>
+                </div>
+            </div>
+            <div class="chat-messages" id="admin-messages-container"></div>
+            <form class="admin-rating-form" id="admin-rating-form">
+                <div class="admin-rating-row">
+                    <label>
+                        Оценка
+                        <input type="number" id="admin-score-input" min="0" max="100" placeholder="0-100">
+                    </label>
+                    <label>
+                        Описание к оценке
+                        <input type="text" id="admin-score-description" placeholder="Что получилось хорошо и что улучшить">
+                    </label>
+                    <button type="submit" id="admin-rating-submit">Сохранить оценку</button>
+                </div>
+                <div class="admin-rating-status" id="admin-rating-status" aria-live="polite"></div>
+            </form>
+            <form class="input-container" id="admin-comment-form">
+                {% csrf_token %}
+                <input type="hidden" id="admin-current-dialog-id" value="{% if first_dialog %}{{ first_dialog.id }}{% endif %}">
+                <input type="text" id="admin-comment-input" placeholder="Комментарий оператору от администратора..." autocomplete="off">
+                <button type="submit" aria-label="Отправить">→</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="{% static 'chat/js/admin_monitor.js' %}?v=1.4"></script>
+    {% if first_dialog %}
+        <script>window.initialAdminDialogId = "{{ first_dialog.id }}";</script>
+    {% endif %}
+</body>
+</html>

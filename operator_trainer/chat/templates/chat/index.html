@@ -5,22 +5,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AI-тренажер операторов</title>
+    <link rel="icon" type="image/png" href="{% static 'chat/img/favicon.png' %}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}?v=3.2">
 </head>
 <body>
     <header class="topbar">
-        <div>
-            <p class="eyebrow">Training workspace</p>
-            <h1>Тренажер операторов</h1>
+        <div class="brand">
+            <img src="{% static 'chat/img/logo-light.png' %}" alt="PROXYS.IO" class="brand-logo">
+            <div>
+                <h1>Тренажер операторов</h1>
+            </div>
         </div>
         <div class="topbar-actions">
-            <span class="operator-chip">Оператор: {{ user.username }}</span>
+            {% if training_panel.knowledge_base_url %}
+                <a href="{{ training_panel.knowledge_base_url }}" class="primary-button header-knowledge-button" target="_blank">База знаний</a>
+            {% else %}
+                <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov" class="primary-button header-knowledge-button" target="_blank">База знаний</a>
+            {% endif %}
+            <a href="{% url 'templates_library' %}" class="secondary-button">Шаблоны</a>
+            <a href="https://proxys.world/ru" class="secondary-button site-button" target="_blank">Наш сайт</a>
+            <a href="{% url 'dashboard' %}" class="operator-chip profile-link">Оператор: {{ user.username }}</a>
             {% if user.is_authenticated and user.is_staff %}
                 <a href="/admin/" class="secondary-button" target="_blank">Админ-панель</a>
             {% endif %}
-            <a href="{% url 'logout' %}" class="secondary-button">Выход</a>
+            <a href="{% url 'logout' %}" class="secondary-button logout-button">Выход</a>
         </div>
     </header>
 
@@ -28,40 +38,69 @@
         <aside class="dialogs-panel" id="dialogs-panel" aria-label="Активные диалоги">
             <div class="panel-heading">
                 <span>Диалоги</span>
-                <span class="counter">{{ dialogs|length }}</span>
+                <span class="counter">{{ active_dialogs|length }}</span>
             </div>
-            {% for dialog in dialogs %}
-                <div class="dialog-item {% if dialog.id == current_dialog.id %}active{% endif %} {% if dialog.unread_count > 0 %}unread{% endif %}" data-dialog-id="{{ dialog.id }}">
+            <div class="dialog-tabs" id="dialog-tabs">
+                <button type="button" class="dialog-tab {% if active_dialogs %}active{% endif %}" data-tab="open">Открытые</button>
+                <button type="button" class="dialog-tab {% if not active_dialogs %}active{% endif %}" data-tab="archive">Архив</button>
+            </div>
+            {% if active_dialogs %}
+                {% for dialog in active_dialogs %}
+                    <div class="dialog-item status-{{ dialog.status }} {% if dialog.id == current_dialog.id %}active{% endif %} {% if dialog.unread_count > 0 %}unread{% endif %} {% if dialog.needs_operator_response %}needs-response{% endif %}" data-dialog-id="{{ dialog.id }}">
+                        <img src="{{ dialog.client_avatar }}" alt="Аватар клиента">
+                        <div class="dialog-info">
+                            <div class="client-name">{{ dialog.client_name }}</div>
+                            <div class="scenario-name">{{ dialog.get_training_title }}</div>
+                            <div class="last-message">{{ dialog.messages.last.text|truncatechars:42 }}</div>
+                            {% with evaluation=dialog.evaluations.first %}
+                                {% if evaluation %}
+                                    <div class="dialog-evaluation-mini">Оценка: {{ evaluation.score }}%</div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <button class="close-button" data-dialog-id="{{ dialog.id }}" title="Закрыть диалог">&times;</button>
+                    </div>
+                {% endfor %}
+            {% else %}
+                {% for dialog in archived_dialogs %}
+                <div class="dialog-item status-{{ dialog.status }} {% if dialog.id == current_dialog.id %}active{% endif %} {% if dialog.unread_count > 0 %}unread{% endif %} {% if dialog.needs_operator_response %}needs-response{% endif %}" data-dialog-id="{{ dialog.id }}">
                     <img src="{{ dialog.client_avatar }}" alt="Аватар клиента">
                     <div class="dialog-info">
                         <div class="client-name">{{ dialog.client_name }}</div>
                         <div class="scenario-name">{{ dialog.get_training_title }}</div>
                         <div class="last-message">{{ dialog.messages.last.text|truncatechars:42 }}</div>
+                        {% with evaluation=dialog.evaluations.first %}
+                            {% if evaluation %}
+                                <div class="dialog-evaluation-mini">Оценка: {{ evaluation.score }}%</div>
+                            {% endif %}
+                        {% endwith %}
                     </div>
-                    <button class="close-button" data-dialog-id="{{ dialog.id }}" title="Закрыть диалог">&times;</button>
+                    {% if dialog.is_closed %}
+                        <span class="dialog-status-badge">{{ dialog.get_status_display }}</span>
+                    {% else %}
+                        <button class="close-button" data-dialog-id="{{ dialog.id }}" title="Закрыть диалог">&times;</button>
+                    {% endif %}
                 </div>
-            {% empty %}
-                <div class="empty-state">Нет активных диалогов</div>
-            {% endfor %}
+                {% empty %}
+                    <div class="empty-state">Нет диалогов в архиве</div>
+                {% endfor %}
+            {% endif %}
         </aside>
 
         <section class="chat-shell">
             <div class="chat-header">
                 <div class="client-profile">
-                    <img src="{{ current_dialog.client_avatar }}" alt="Аватар клиента" id="current-client-avatar">
+                    <img src="{{ current_client_avatar }}" alt="Аватар клиента" id="current-client-avatar">
                     <div>
                         <h2 id="current-client-name">{{ training_panel.client_name }}</h2>
                         <p><span class="status-dot"></span><span id="current-client-status">{{ training_panel.client_status }}</span></p>
                     </div>
                 </div>
-                <div class="session-meta">
-                    <span id="scenario-title">{{ training_panel.title }}</span>
-                    <span id="scenario-difficulty">{{ training_panel.difficulty }}</span>
-                </div>
             </div>
 
             <div class="progress-indicator" id="progress-indicator">
                 <span id="progress-label">Шаг {{ current_step }} из {{ max_steps }}</span>
+                <div class="progress-dots" id="progress-dots" data-current="{{ current_step }}" data-total="{{ max_steps }}"></div>
                 <div class="progress-track">
                     <div class="progress-fill" id="progress-fill" style="width: {% widthratio current_step max_steps 100 %}%"></div>
                 </div>
@@ -69,15 +108,18 @@
 
             <div class="chat-messages" id="messages-container">
                 {% for message in messages %}
-                    <div class="message {% if message.sender %}operator{% elif message.role == 'system' %}system{% else %}client{% endif %}">
+                    <div class="message {% if message.role == 'admin' %}admin{% elif message.sender %}operator{% elif message.role == 'system' %}system{% else %}client{% endif %}">
                         <div class="message-header">
-                            {% if message.sender %}
-                                <img src="{% if user.avatar %}{{ user.avatar }}{% else %}https://github.com/identicons/default.png{% endif %}" alt="Аватар оператора" class="message-avatar">
+                            {% if message.role == 'admin' %}
+                                <img src="{{ message.sender.avatar|default:user.avatar }}" alt="Аватар администратора" class="message-avatar">
+                                <span class="message-sender">{{ message.sender.username|default:"Администратор" }}</span>
+                            {% elif message.sender %}
+                                <img src="{{ message.sender.avatar|default:user.avatar }}" alt="Аватар оператора" class="message-avatar">
                                 <span class="message-sender">Вы</span>
                             {% elif message.role == 'system' %}
                                 <span class="message-sender">Система</span>
                             {% else %}
-                                <img src="{{ current_dialog.client_avatar }}" alt="Аватар клиента" class="message-avatar">
+                                <img src="{{ current_client_avatar }}" alt="Аватар клиента" class="message-avatar">
                                 <span class="message-sender">{{ training_panel.client_name }}</span>
                             {% endif %}
                             <span class="message-time">{{ message.timestamp|date:"H:i" }}</span>
@@ -86,9 +128,6 @@
                             {% endif %}
                         </div>
                         <div class="message-text">{{ message.text }}</div>
-                        {% if message.metadata.evaluation_feedback %}
-                            <div class="message-feedback">{{ message.metadata.evaluation_feedback }}</div>
-                        {% endif %}
                         {% if message.admin_comment %}
                             <div class="admin-comment">Комментарий администратора: {{ message.admin_comment }}</div>
                         {% endif %}
@@ -104,7 +143,10 @@
             <form class="input-container" id="message-form">
                 {% csrf_token %}
                 <input type="hidden" name="dialog_id" id="current-dialog-id" value="{{ current_dialog.id }}">
-                <input type="text" name="user_answer" placeholder="Ответ оператору от вашего имени..." autocomplete="off" required id="message-input">
+                <div class="message-input-wrap">
+                    <div class="template-suggestions" id="template-suggestions"></div>
+                    <input type="text" name="user_answer" placeholder="Ответ клиенту от вашего имени..." autocomplete="off" required id="message-input">
+                </div>
                 <button type="submit" aria-label="Отправить"><i class="fas fa-paper-plane"></i></button>
             </form>
         </section>
@@ -123,10 +165,10 @@
 
             <section class="card">
                 <div class="card-heading">
-                    <p class="eyebrow">Подсказки</p>
-                    <button type="button" class="link-button" id="hint-button">Показать</button>
+                    <p class="eyebrow">Напоминание</p>
                 </div>
-                <div class="hints-container" id="hints-container">
+                <div class="hints-container active context-reminder" id="hints-container">
+                    <div class="hint reminder-accent">Ориентируйтесь на проблему клиента и цель кейса. Не просите лишние данные и ведите диалог как в реальной поддержке.</div>
                     {% for hint in hints %}
                         <div class="hint">{{ hint }}</div>
                     {% empty %}
@@ -138,24 +180,24 @@
                 </div>
             </section>
 
-            <section class="card">
-                <p class="eyebrow">База знаний</p>
-                {% if training_panel.knowledge_base_url %}
-                    <a href="{{ training_panel.knowledge_base_url }}" class="primary-button" target="_blank">Открыть статью</a>
-                {% else %}
-                    <a href="https://df11ef6.platrum.ru/wiki/space/dlya-operatorov" class="primary-button" target="_blank">Открыть базу знаний</a>
-                {% endif %}
+            <section class="card operator-evaluation-card" id="operator-evaluation-card" {% if not current_evaluation %}hidden{% endif %}>
+                <p class="eyebrow">Оценка администратора</p>
+                <h3 id="operator-evaluation-score">{% if current_evaluation %}{{ current_evaluation.score }}%{% endif %}</h3>
+                <p id="operator-evaluation-description">{% if current_evaluation %}{{ current_evaluation.feedback|default:"Без описания" }}{% endif %}</p>
             </section>
         </aside>
     </main>
 
     <button class="toggle-button" id="toggle-button" style="display: none;">☰</button>
+    <div class="toast-container" id="toast-container"></div>
 
     <script>
-        window.userAvatar = "{% if user.avatar %}{{ user.avatar }}{% else %}https://github.com/identicons/default.png{% endif %}";
-        window.dialogClientAvatar = "{{ current_dialog.client_avatar }}";
+        window.userAvatar = "{{ user.avatar }}";
+        window.dialogClientAvatar = "{{ current_client_avatar }}";
         window.currentClientName = "{{ training_panel.client_name|escapejs }}";
+        window.initialCanSend = {{ can_send|yesno:"true,false" }};
+        window.initialDialogs = {{ initial_dialogs_json|safe }};
     </script>
-    <script src="{% static 'chat/js/script.js' %}?v=2.0"></script>
+    <script src="{% static 'chat/js/script.js' %}?v=3.2"></script>
 </body>
 </html>

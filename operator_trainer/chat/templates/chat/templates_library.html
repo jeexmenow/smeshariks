@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шаблоны Talk-Me</title>
+    <link rel="icon" type="image/png" href="{% static 'chat/img/favicon.png' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}?v=2.8">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <img src="{% static 'chat/img/logo-light.png' %}" alt="PROXYS.IO" class="brand-logo">
+            <div>
+                <h1>Шаблоны Talk-Me</h1>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <a href="{% url 'chat_trainer' %}" class="primary-button header-knowledge-button">К тренажеру</a>
+            <a href="{% url 'dashboard' %}" class="operator-chip profile-link">Оператор: {{ user.username }}</a>
+            <a href="{% url 'logout' %}" class="secondary-button logout-button">Выход</a>
+        </div>
+    </header>
+
+    <main class="templates-page">
+        <section class="templates-hero">
+            <p class="eyebrow">Talk-Me templates</p>
+            <h2>База шаблонов для изучения</h2>
+            <p>Поиск по готовым ответам Talk-Me: категории, язык, вложения и быстрый просмотр полного текста шаблона.</p>
+        </section>
+
+        <section class="template-tools template-tools-wide">
+            <input type="search" class="template-search" id="template-library-search" placeholder="Найти шаблон, категорию или фразу...">
+            <select class="template-select" id="template-library-category">
+                <option value="all">Все категории</option>
+            </select>
+            <select class="template-select" id="template-library-lang">
+                <option value="all">Все языки</option>
+            </select>
+            <select class="template-select" id="template-library-attach">
+                <option value="all">Любые вложения</option>
+                <option value="yes">С вложениями</option>
+                <option value="no">Без вложений</option>
+            </select>
+        </section>
+
+        <section class="template-chips" id="template-library-chips">
+            <button class="template-chip active" type="button" data-category="all">Все</button>
+        </section>
+
+        <section class="template-library-stats">
+            <span>Найдено: <strong id="template-library-count">0</strong></span>
+            <span>Всего шаблонов: <strong id="template-library-total">0</strong></span>
+            <span id="template-library-page">Страница 1 / 1</span>
+        </section>
+
+        <section class="template-library-pagination">
+            <button type="button" class="template-copy-link" id="template-library-prev">Назад</button>
+            <button type="button" class="template-open-link" id="template-library-next">Дальше</button>
+        </section>
+
+        <section class="template-link-grid" id="template-library-grid"></section>
+
+        <div class="empty-state template-library-empty" id="template-library-empty">Шаблоны не найдены. Попробуйте другой запрос или категорию.</div>
+        <section class="templates-note">Перед отправкой клиенту проверьте, что шаблон подходит под конкретный кейс, тон диалога и текущие условия сервиса.</section>
+    </main>
+
+    <div class="template-modal-backdrop" id="template-modal-backdrop">
+        <section class="template-modal">
+            <div class="template-modal-head">
+                <div>
+                    <h2 id="template-modal-title">Шаблон</h2>
+                    <p id="template-modal-meta"></p>
+                </div>
+                <button type="button" class="close-button" id="template-modal-close">&times;</button>
+            </div>
+            <div class="template-modal-body">
+                <div class="template-modal-categories" id="template-modal-categories"></div>
+                <pre class="template-modal-text" id="template-modal-text"></pre>
+                <div class="template-modal-attachments" id="template-modal-attachments"></div>
+                <button type="button" class="template-open-link" id="template-modal-copy">Скопировать текст</button>
+            </div>
+        </section>
+    </div>
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        window.talkmeTemplatesSource = "{% static 'chat/data/talkme_templates.json' %}";
+    </script>
+    <script src="{% static 'chat/js/templates_library.js' %}?v=2.1"></script>
+</body>
+</html>
